@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "qslider": "cpp",
+        "qwebenginesettings": "cpp",
+        "qmainwindow": "cpp",
+        "qmouseevent": "cpp"
+    }
+}
