@@ -4,6 +4,10 @@ file(REMOVE_RECURSE
   "gpx_viewer_autogen"
   "CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o"
   "CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o.d"
+  "CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o"
+  "CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o.d"
+  "CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o"
+  "CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o.d"
   "CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/mocs_compilation.cpp.o"
   "CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/mocs_compilation.cpp.o.d"
   "CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o"
@@ -14,13 +18,11 @@ file(REMOVE_RECURSE
   "CMakeFiles/gpx_viewer.dir/mainwindow.cpp.o.d"
   "CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.o"
   "CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.o.d"
-  "CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o"
-  "CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o.d"
   "gpx_viewer"
   "gpx_viewer.pdb"
+  "gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp"
   "gpx_viewer_autogen/mocs_compilation.cpp"
   "gpx_viewer_autogen/timestamp"
-  "qrc_resources.cpp"
 )
 
 # Per-language clean rules from dependency scanning.

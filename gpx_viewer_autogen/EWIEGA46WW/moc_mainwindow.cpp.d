@@ -1,6 +1,7 @@
 /home/abartfeld/test/gpx_viewer_autogen/EWIEGA46WW/moc_mainwindow.cpp: /home/abartfeld/test/mainwindow.h \
   /home/abartfeld/test/gpx_viewer_autogen/moc_predefs.h \
   /home/abartfeld/test/MapWidget.h \
+  /home/abartfeld/test/TrackStatsWidget.h \
   /home/abartfeld/test/gpxparser.h \
   /home/abartfeld/test/qcustomplot.h \
   /usr/include/GL/gl.h \
@@ -307,6 +308,7 @@
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QXmlStreamReader \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QtCore \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QtCoreDepends \
+  /usr/include/x86_64-linux-gnu/qt5/QtCore/QtMath \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/QtNumeric \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qabstractanimation.h \
   /usr/include/x86_64-linux-gnu/qt5/QtCore/qabstracteventdispatcher.h \
@@ -660,11 +662,13 @@
   /usr/include/x86_64-linux-gnu/qt5/QtPrintSupport/qtprintsupportglobal.h \
   /usr/include/x86_64-linux-gnu/qt5/QtPrintSupport/qtprintsupportversion.h \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QCommonStyle \
+  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGridLayout \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QLabel \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QLayout \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QMainWindow \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QScrollerProperties \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QSlider \
+  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QVBoxLayout \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QWidget \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QtWidgets \
   /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QtWidgetsDepends \

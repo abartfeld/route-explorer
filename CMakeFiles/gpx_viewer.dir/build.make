@@ -69,21 +69,23 @@ include CMakeFiles/gpx_viewer.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/gpx_viewer.dir/flags.make
 
-qrc_resources.cpp: resources.qrc
-qrc_resources.cpp: icons/map-marker.svg
-qrc_resources.cpp: icons/open-file.svg
-qrc_resources.cpp: icons/zoom-in.svg
-qrc_resources.cpp: icons/zoom-out.svg
-qrc_resources.cpp: resources.qrc.depends
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating qrc_resources.cpp"
-	/usr/lib/qt5/bin/rcc --name resources --output /home/abartfeld/test/qrc_resources.cpp /home/abartfeld/test/resources.qrc
-
 gpx_viewer_autogen/timestamp: /usr/lib/qt5/bin/moc
 gpx_viewer_autogen/timestamp: /usr/lib/qt5/bin/uic
 gpx_viewer_autogen/timestamp: CMakeFiles/gpx_viewer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Automatic MOC and UIC for target gpx_viewer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Automatic MOC and UIC for target gpx_viewer"
 	/usr/bin/cmake -E cmake_autogen /home/abartfeld/test/CMakeFiles/gpx_viewer_autogen.dir/AutogenInfo.json ""
 	/usr/bin/cmake -E touch /home/abartfeld/test/gpx_viewer_autogen/timestamp
+
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: resources.qrc
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: CMakeFiles/gpx_viewer_autogen.dir/AutoRcc_resources_EWIEGA46WW_Info.json
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: icons/zoom-in.svg
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: icons/open-file.svg
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: icons/map-marker.svg
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: icons/zoom-out.svg
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: /usr/lib/qt5/bin/rcc
+gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp: /usr/lib/qt5/bin/rcc
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Automatic RCC for resources.qrc"
+	/usr/bin/cmake -E cmake_autorcc /home/abartfeld/test/CMakeFiles/gpx_viewer_autogen.dir/AutoRcc_resources_EWIEGA46WW_Info.json 
 
 CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/mocs_compilation.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
 CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/mocs_compilation.cpp.o: gpx_viewer_autogen/mocs_compilation.cpp
@@ -127,24 +129,10 @@ CMakeFiles/gpx_viewer.dir/mainwindow.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/mainwindow.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/mainwindow.cpp -o CMakeFiles/gpx_viewer.dir/mainwindow.cpp.s
 
-CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
-CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o: gpxparser.cpp
-CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o: CMakeFiles/gpx_viewer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o -MF CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o.d -o CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o -c /home/abartfeld/test/gpxparser.cpp
-
-CMakeFiles/gpx_viewer.dir/gpxparser.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gpx_viewer.dir/gpxparser.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/abartfeld/test/gpxparser.cpp > CMakeFiles/gpx_viewer.dir/gpxparser.cpp.i
-
-CMakeFiles/gpx_viewer.dir/gpxparser.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/gpxparser.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/gpxparser.cpp -o CMakeFiles/gpx_viewer.dir/gpxparser.cpp.s
-
 CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
 CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o: MapWidget.cpp
 CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o: CMakeFiles/gpx_viewer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o -MF CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o.d -o CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o -c /home/abartfeld/test/MapWidget.cpp
 
 CMakeFiles/gpx_viewer.dir/MapWidget.cpp.i: cmake_force
@@ -154,6 +142,20 @@ CMakeFiles/gpx_viewer.dir/MapWidget.cpp.i: cmake_force
 CMakeFiles/gpx_viewer.dir/MapWidget.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/MapWidget.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/MapWidget.cpp -o CMakeFiles/gpx_viewer.dir/MapWidget.cpp.s
+
+CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
+CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o: gpxparser.cpp
+CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o: CMakeFiles/gpx_viewer.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o -MF CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o.d -o CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o -c /home/abartfeld/test/gpxparser.cpp
+
+CMakeFiles/gpx_viewer.dir/gpxparser.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gpx_viewer.dir/gpxparser.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/abartfeld/test/gpxparser.cpp > CMakeFiles/gpx_viewer.dir/gpxparser.cpp.i
+
+CMakeFiles/gpx_viewer.dir/gpxparser.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/gpxparser.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/gpxparser.cpp -o CMakeFiles/gpx_viewer.dir/gpxparser.cpp.s
 
 CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
 CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.o: qcustomplot.cpp
@@ -169,29 +171,44 @@ CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/qcustomplot.cpp -o CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.s
 
-CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
-CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o: qrc_resources.cpp
-CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o: CMakeFiles/gpx_viewer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o -MF CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o.d -o CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o -c /home/abartfeld/test/qrc_resources.cpp
+CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
+CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o: TrackStatsWidget.cpp
+CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o: CMakeFiles/gpx_viewer.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o -MF CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o.d -o CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o -c /home/abartfeld/test/TrackStatsWidget.cpp
 
-CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/abartfeld/test/qrc_resources.cpp > CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.i
+CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/abartfeld/test/TrackStatsWidget.cpp > CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.i
 
-CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/qrc_resources.cpp -o CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.s
+CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/TrackStatsWidget.cpp -o CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.s
+
+CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o: CMakeFiles/gpx_viewer.dir/flags.make
+CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o: gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp
+CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o: CMakeFiles/gpx_viewer.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o -MF CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o.d -o CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o -c /home/abartfeld/test/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp
+
+CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/abartfeld/test/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp > CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.i
+
+CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/abartfeld/test/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp -o CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.s
 
 # Object files for target gpx_viewer
 gpx_viewer_OBJECTS = \
 "CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/mocs_compilation.cpp.o" \
 "CMakeFiles/gpx_viewer.dir/main.cpp.o" \
 "CMakeFiles/gpx_viewer.dir/mainwindow.cpp.o" \
-"CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o" \
 "CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o" \
+"CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o" \
 "CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.o" \
-"CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o"
+"CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o" \
+"CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o"
 
 # External object files for target gpx_viewer
 gpx_viewer_EXTERNAL_OBJECTS =
@@ -199,19 +216,19 @@ gpx_viewer_EXTERNAL_OBJECTS =
 gpx_viewer: CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/mocs_compilation.cpp.o
 gpx_viewer: CMakeFiles/gpx_viewer.dir/main.cpp.o
 gpx_viewer: CMakeFiles/gpx_viewer.dir/mainwindow.cpp.o
-gpx_viewer: CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o
 gpx_viewer: CMakeFiles/gpx_viewer.dir/MapWidget.cpp.o
+gpx_viewer: CMakeFiles/gpx_viewer.dir/gpxparser.cpp.o
 gpx_viewer: CMakeFiles/gpx_viewer.dir/qcustomplot.cpp.o
-gpx_viewer: CMakeFiles/gpx_viewer.dir/qrc_resources.cpp.o
+gpx_viewer: CMakeFiles/gpx_viewer.dir/TrackStatsWidget.cpp.o
+gpx_viewer: CMakeFiles/gpx_viewer.dir/gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp.o
 gpx_viewer: CMakeFiles/gpx_viewer.dir/build.make
-gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5Positioning.so.5.15.15
-gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5Network.so.5.15.15
-gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5PrintSupport.so.5.15.15
 gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5Widgets.so.5.15.15
+gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5Network.so.5.15.15
+gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5Positioning.so.5.15.15
 gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5Gui.so.5.15.15
 gpx_viewer: /usr/lib/x86_64-linux-gnu/libQt5Core.so.5.15.15
 gpx_viewer: CMakeFiles/gpx_viewer.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX executable gpx_viewer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/abartfeld/test/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX executable gpx_viewer"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/gpx_viewer.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -222,8 +239,8 @@ CMakeFiles/gpx_viewer.dir/clean:
 	$(CMAKE_COMMAND) -P CMakeFiles/gpx_viewer.dir/cmake_clean.cmake
 .PHONY : CMakeFiles/gpx_viewer.dir/clean
 
+CMakeFiles/gpx_viewer.dir/depend: gpx_viewer_autogen/EWIEGA46WW/qrc_resources.cpp
 CMakeFiles/gpx_viewer.dir/depend: gpx_viewer_autogen/timestamp
-CMakeFiles/gpx_viewer.dir/depend: qrc_resources.cpp
 	cd /home/abartfeld/test && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/abartfeld/test /home/abartfeld/test /home/abartfeld/test /home/abartfeld/test /home/abartfeld/test/CMakeFiles/gpx_viewer.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/gpx_viewer.dir/depend
 

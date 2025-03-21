@@ -7,7 +7,13 @@
 	"CROSS_CONFIG" : false,
 	"GENERATOR" : "Unix Makefiles",
 	"INCLUDE_DIR" : "/home/abartfeld/test/gpx_viewer_autogen/include",
-	"INPUTS" : [],
+	"INPUTS" : 
+	[
+		"/home/abartfeld/test/icons/zoom-in.svg",
+		"/home/abartfeld/test/icons/open-file.svg",
+		"/home/abartfeld/test/icons/map-marker.svg",
+		"/home/abartfeld/test/icons/zoom-out.svg"
+	],
 	"LOCK_FILE" : "/home/abartfeld/test/CMakeFiles/gpx_viewer_autogen.dir/AutoRcc_resources_EWIEGA46WW_Lock.lock",
 	"MULTI_CONFIG" : false,
 	"OPTIONS" : [ "-name", "resources" ],

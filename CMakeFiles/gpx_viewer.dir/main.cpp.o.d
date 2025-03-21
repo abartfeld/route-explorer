@@ -38,8 +38,8 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/c++/14/debug/assertions.h \
  /usr/include/c++/14/bits/stl_iterator.h \
  /usr/include/c++/14/bits/ptr_traits.h /usr/include/c++/14/debug/debug.h \
- /usr/include/c++/14/bits/predefined_ops.h /usr/include/c++/14/bit \
- /usr/include/c++/14/concepts /usr/include/c++/14/bits/stl_algo.h \
+ /usr/include/c++/14/bits/predefined_ops.h \
+ /usr/include/c++/14/bits/stl_algo.h \
  /usr/include/c++/14/bits/algorithmfwd.h \
  /usr/include/c++/14/bits/stl_heap.h \
  /usr/include/c++/14/bits/uniform_int_dist.h \
@@ -223,7 +223,8 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qcontainerfwd.h \
  /usr/include/c++/14/memory \
  /usr/include/c++/14/bits/stl_raw_storage_iter.h \
- /usr/include/c++/14/bits/align.h /usr/include/c++/14/bits/unique_ptr.h \
+ /usr/include/c++/14/bits/align.h /usr/include/c++/14/bit \
+ /usr/include/c++/14/bits/unique_ptr.h \
  /usr/include/c++/14/bits/shared_ptr.h \
  /usr/include/c++/14/bits/shared_ptr_base.h \
  /usr/include/c++/14/ext/concurrence.h \
@@ -284,21 +285,9 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QSlider \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qslider.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractslider.h \
- /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QLabel \
- /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlabel.h \
- /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qframe.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QTimer \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qtimer.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qbasictimer.h \
- /usr/include/x86_64-linux-gnu/qt5/QtPositioning/QGeoCoordinate \
- /usr/include/x86_64-linux-gnu/qt5/QtPositioning/qgeocoordinate.h \
- /usr/include/x86_64-linux-gnu/qt5/QtCore/QMetaType \
- /usr/include/x86_64-linux-gnu/qt5/QtCore/qmetatype.h \
- /usr/include/x86_64-linux-gnu/qt5/QtCore/QString \
- /usr/include/x86_64-linux-gnu/qt5/QtCore/qstring.h \
- /usr/include/x86_64-linux-gnu/qt5/QtCore/QSharedDataPointer \
- /usr/include/x86_64-linux-gnu/qt5/QtCore/qshareddata.h \
- /usr/include/x86_64-linux-gnu/qt5/QtPositioning/qpositioningglobal.h \
  /home/abartfeld/test/qcustomplot.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QObject \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qobject.h \
@@ -327,6 +316,8 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtGui/qpixmap.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QVector \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qvector.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/QString \
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/qstring.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QDateTime \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qdatetime.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QMultiMap \
@@ -479,6 +470,7 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qmessageauthenticationcode.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qcryptographichash.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qmetaobject.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/qmetatype.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qmimedata.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qmimedatabase.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qmimetype.h \
@@ -525,6 +517,7 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qsequentialanimationgroup.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qset.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qsettings.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/qshareddata.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qsharedmemory.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qsignalmapper.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qsignaltransition.h \
@@ -659,6 +652,7 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtGui/qopenglfunctions.h \
  /usr/include/x86_64-linux-gnu/qt5/QtGui/qopenglpaintdevice.h \
  /usr/include/x86_64-linux-gnu/qt5/QtGui/qopenglpixeltransferoptions.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/QSharedDataPointer \
  /usr/include/x86_64-linux-gnu/qt5/QtGui/qopenglshaderprogram.h \
  /usr/include/x86_64-linux-gnu/qt5/QtGui/qmatrix4x4.h \
  /usr/include/x86_64-linux-gnu/qt5/QtGui/qopengltexture.h \
@@ -741,6 +735,7 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qstyle.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qtabbar.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qrubberband.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qframe.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractitemview.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qabstractscrollarea.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qitemselectionmodel.h \
@@ -831,6 +826,7 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qkeyeventtransition.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/qeventtransition.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qkeysequenceedit.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlabel.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlayoutitem.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlcdnumber.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qlineedit.h \
@@ -861,6 +857,7 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QPointF \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QScrollerProperties \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qscrollerproperties.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/QMetaType \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QVariant \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qshortcut.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/qsizegrip.h \
@@ -920,10 +917,13 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QTimeZone \
  /home/abartfeld/test/gpxparser.h \
  /usr/include/x86_64-linux-gnu/qt5/QtPositioning/QGeoCoordinate \
+ /usr/include/x86_64-linux-gnu/qt5/QtPositioning/qgeocoordinate.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtPositioning/qpositioningglobal.h \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QString \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QXmlStreamReader \
  /home/abartfeld/test/MapWidget.h \
  /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QWidget \
+ /usr/include/x86_64-linux-gnu/qt5/QtPositioning/QGeoCoordinate \
  /usr/include/x86_64-linux-gnu/qt5/QtNetwork/QNetworkAccessManager \
  /usr/include/x86_64-linux-gnu/qt5/QtNetwork/qnetworkaccessmanager.h \
  /usr/include/x86_64-linux-gnu/qt5/QtNetwork/qtnetworkglobal.h \
@@ -948,4 +948,9 @@ CMakeFiles/gpx_viewer.dir/main.cpp.o: /home/abartfeld/test/main.cpp \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QCache \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QStandardPaths \
  /usr/include/x86_64-linux-gnu/qt5/QtCore/QFile \
- /usr/include/x86_64-linux-gnu/qt5/QtCore/QDir
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/QDir \
+ /home/abartfeld/test/TrackStatsWidget.h \
+ /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QLabel \
+ /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QVBoxLayout \
+ /usr/include/x86_64-linux-gnu/qt5/QtWidgets/QGridLayout \
+ /usr/include/x86_64-linux-gnu/qt5/QtCore/QtMath
