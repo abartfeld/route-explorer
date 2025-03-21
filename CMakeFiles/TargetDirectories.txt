@@ -1,9 +1,0 @@
-/home/abartfeld/test/CMakeFiles/gpx_viewer.dir
-/home/abartfeld/test/CMakeFiles/edit_cache.dir
-/home/abartfeld/test/CMakeFiles/rebuild_cache.dir
-/home/abartfeld/test/CMakeFiles/list_install_components.dir
-/home/abartfeld/test/CMakeFiles/install.dir
-/home/abartfeld/test/CMakeFiles/install/local.dir
-/home/abartfeld/test/CMakeFiles/install/strip.dir
-/home/abartfeld/test/CMakeFiles/gpx_viewer_autogen_timestamp_deps.dir
-/home/abartfeld/test/CMakeFiles/gpx_viewer_autogen.dir

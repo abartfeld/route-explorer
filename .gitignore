@@ -49,6 +49,12 @@ CMakeLists.txt.user*
 /build*/
 /bin/
 /lib/
+/CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+.cmake/
+gpx_viewer
+gpx_viewer.exe
 
 # IDE specific files
 .vscode/
@@ -70,3 +76,9 @@ CMakeLists.txt.user*
 
 # Cache files
 .cache/
+
+# Generated resources
+qrc_*.cpp
+
+# Specific to this project
+maptiles/

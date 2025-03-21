@@ -1,12 +1,11 @@
 #pragma once
 #include <QMainWindow>
 #include <QSlider>
-#include <QLabel>
 #include <QTimer>
-#include <QtPositioning/QGeoCoordinate>
-#include "qcustomplot.h"
+#include <QCustomPlot>
 #include "gpxparser.h"
 #include "MapWidget.h"
+#include "TrackStatsWidget.h"
 
 /**
  * @brief Main application window
@@ -22,6 +21,7 @@ public:
      * @param parent Parent widget
      */
     MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
 private slots:
     /**
@@ -42,20 +42,9 @@ private:
     void setupUi();
 
     /**
-     * @brief Update map view with new position
-     * @param position New geographical position
-     */
-    void updateMap(const QGeoCoordinate& position);
-
-    /**
      * @brief Plot elevation profile graph
      */
     void plotElevationProfile();
-
-    /**
-     * @brief Update display with current position
-     */
-    void updateDisplay();
 
     /**
      * @brief Update elevation plot marker position
@@ -68,17 +57,15 @@ private:
      * @param targetDistance Distance in meters
      * @return Index of closest point
      */
-    size_t findClosestPoint(double targetDistance);
-
-    // Optimized method to find closest point efficiently with binary search
     size_t findClosestPointByDistance(double targetDistance);
 
-    GPXParser m_gpxParser;
-    QCustomPlot* m_elevationPlot;
+    // UI Elements
     MapWidget* m_mapView;
+    QCustomPlot* m_elevationPlot;
     QSlider* m_positionSlider;
-    QLabel* m_elevationLabel;
+    TrackStatsWidget* m_statsWidget;
+
+    // Data
+    GPXParser m_gpxParser;
     size_t m_currentPointIndex{0};
-    QTimer m_updateTimer;
-    int m_pendingSliderValue{0};
 };
