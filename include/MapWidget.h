@@ -15,6 +15,8 @@
  * This simpler map widget implementation focuses on reliable panning and
  * zooming with proper tile loading.
  */
+class QCPPainter; // Forward declaration
+
 class MapWidget : public QWidget {
     Q_OBJECT
 public:

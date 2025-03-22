@@ -10,34 +10,42 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find required Qt packages
-find_package(Qt5 COMPONENTS Core Widgets Network Positioning REQUIRED)
+find_package(Qt5 COMPONENTS Core Widgets Network Positioning PrintSupport REQUIRED)
 
 # Include directories
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+)
 
 # Source files
 set(SOURCES
-    main.cpp
-    mainwindow.cpp
-    mainwindow.h
-    MapWidget.cpp
-    MapWidget.h
-    gpxparser.cpp
-    gpxparser.h
-    qcustomplot.cpp
-    qcustomplot.h
-    TrackStatsWidget.cpp
-    TrackStatsWidget.h
+    src/main.cpp
+    src/mainwindow.cpp
+    src/MapWidget.cpp
+    src/gpxparser.cpp
+    src/TrackStatsWidget.cpp
+    third_party/qcustomplot.cpp
+)
+
+# Header files
+set(HEADERS
+    include/mainwindow.h
+    include/MapWidget.h
+    include/gpxparser.h
+    include/TrackStatsWidget.h
+    third_party/qcustomplot.h
 )
 
 # Resources
 set(RESOURCES
-    resources.qrc
+    resources/resources.qrc
 )
 
 # Create executable
 add_executable(gpx_viewer
     ${SOURCES}
+    ${HEADERS}
     ${RESOURCES}
 )
 
@@ -47,6 +55,7 @@ target_link_libraries(gpx_viewer
     Qt5::Widgets
     Qt5::Network
     Qt5::Positioning
+    Qt5::PrintSupport
 )
 
 # Install rules

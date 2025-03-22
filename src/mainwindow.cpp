@@ -15,25 +15,21 @@
 #include <QFrame>
 #include <QPalette>
 #include <QElapsedTimer>
+#include <QSplitter>
+#include <QApplication>
+#include <QRandomGenerator>
+#include <algorithm>
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
-    // Set window properties
-    setWindowTitle("GPX Track Viewer");
-    setMinimumSize(900, 600);
-    
-    // Initialize UI elements with Material Design styling
+MainWindow::MainWindow(QWidget *parent) 
+    : QMainWindow(parent),
+      m_currentPointIndex(0)
+{
     setupUi();
-    
-    // Connect signals/slots
-    connect(m_positionSlider, &QSlider::valueChanged, this, &MainWindow::updatePosition);
-    
-    // Initialize timer for smooth updates
-    m_updateTimer.setSingleShot(true);
-    m_updateTimer.setInterval(50); // 50ms delay
-    connect(&m_updateTimer, &QTimer::timeout, this, &MainWindow::updateDisplay);
-    
-    // Status bar message
-    statusBar()->showMessage("Ready. Open a GPX file to begin.");
+}
+
+MainWindow::~MainWindow()
+{
+    // Qt's parent-child mechanism handles cleanup
 }
 
 void MainWindow::setupUi() {
@@ -102,18 +98,18 @@ void MainWindow::setupUi() {
     setWindowIcon(QIcon(":/icons/map-marker.svg"));
     setUnifiedTitleAndToolBarOnMac(true);
     
-    // Create the central widget and main layout
+    // Create the central widget with horizontal layout
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
     QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
     mainLayout->setContentsMargins(12, 12, 12, 12);
-    mainLayout->setSpacing(8);
+    mainLayout->setSpacing(12);
     
-    // Create left main panel for map and elevation
+    // Create left side layout that will contain map and elevation profile
     QWidget *leftPanel = new QWidget();
     QVBoxLayout *leftLayout = new QVBoxLayout(leftPanel);
     leftLayout->setContentsMargins(0, 0, 0, 0);
-    leftLayout->setSpacing(8);
+    leftLayout->setSpacing(12);
     
     // Create the map widget
     m_mapView = new MapWidget(this);
@@ -124,18 +120,18 @@ void MainWindow::setupUi() {
     QVBoxLayout *mapLayout = new QVBoxLayout(mapFrame);
     mapLayout->setContentsMargins(0, 0, 0, 0);
     mapLayout->addWidget(m_mapView);
-    leftLayout->addWidget(mapFrame, 3); // Set stretch to 3
+    leftLayout->addWidget(mapFrame, 7); // Map gets 7/10 of vertical space
     
     // Create the bottom panel containing the elevation profile
     QWidget *bottomPanel = new QWidget();
     QVBoxLayout *bottomLayout = new QVBoxLayout(bottomPanel);
-    bottomLayout->setContentsMargins(12, 12, 12, 12);
+    bottomLayout->setContentsMargins(0, 0, 0, 0);
     bottomLayout->setSpacing(8);
-    leftLayout->addWidget(bottomPanel, 1); // Set stretch to 1
+    leftLayout->addWidget(bottomPanel, 3); // Elevation gets 3/10 of vertical space
     
     // Create the elevation profile plot with themed colors
     m_elevationPlot = new QCustomPlot();
-    m_elevationPlot->setMinimumHeight(170);
+    m_elevationPlot->setMinimumHeight(120);
     m_elevationPlot->setBackground(QColor("#ffffff"));
     m_elevationPlot->xAxis->setBasePen(QPen(QColor("#9e9e9e"), 1));
     m_elevationPlot->yAxis->setBasePen(QPen(QColor("#9e9e9e"), 1));
@@ -164,26 +160,40 @@ void MainWindow::setupUi() {
     m_elevationPlot->graph(1)->setLineStyle(QCPGraph::lsNone);
     m_elevationPlot->graph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, QColor("#F44336"), 8));
     
-    // Fix axis ranges to prevent auto-scaling
+    // Disable interactions with the plot
     m_elevationPlot->setInteraction(QCP::iRangeDrag, false);
     m_elevationPlot->setInteraction(QCP::iRangeZoom, false);
     
+    // Adjust the plot margins to match slider
+    m_elevationPlot->axisRect()->setAutoMargins(QCP::msBottom|QCP::msTop);
+    m_elevationPlot->axisRect()->setMargins(QMargins(50, 0, 50, 0));
+    
     bottomLayout->addWidget(m_elevationPlot);
     
-    // Get the axis rect margins so we can match the slider precisely with the plot area
-    int leftAxisMargin = m_elevationPlot->axisRect()->margins().left();
-    int rightAxisMargin = m_elevationPlot->axisRect()->margins().right();
-    
-    // Create slider for position with Material Design styling and proper margins to align with Y-axis
+    // Create slider for position with Material Design styling
     m_positionSlider = new QSlider(Qt::Horizontal, this);
     m_positionSlider->setEnabled(false);
+    
+    bottomLayout->addWidget(m_positionSlider);
+    
+    // Add left panel to main layout, with stretch factor
+    mainLayout->addWidget(leftPanel, 1);
+    
+    // Create the stats widget
+    m_statsWidget = new TrackStatsWidget(this);
+    mainLayout->addWidget(m_statsWidget, 0); // 0 stretch means it won't expand
+    
+    // Update slider style after plot is created
+    int yAxisWidth = m_elevationPlot->yAxis->axisRect()->left();
+    int rightMargin = m_elevationPlot->width() - m_elevationPlot->axisRect()->right();
+    
     m_positionSlider->setStyleSheet(
-        "QSlider::groove:horizontal {"
+        QString("QSlider::groove:horizontal {"
         "  height: 4px;"
         "  background: #e0e0e0;"
         "  border-radius: 2px;"
-        "  margin-left: " + QString::number(leftAxisMargin) + "px;" // Match Y axis exactly
-        "  margin-right: " + QString::number(rightAxisMargin) + "px;" // Match right edge exactly
+        "  margin-left: %1px;" // Match left edge of plot axis rect
+        "  margin-right: %2px;" // Match right edge of plot axis rect
         "}"
         "QSlider::handle:horizontal {"
         "  background: #2196F3;"
@@ -196,44 +206,9 @@ void MainWindow::setupUi() {
         "QSlider::sub-page:horizontal {"
         "  background: #2196F3;"
         "  border-radius: 2px;"
-        "  margin-left: 0px;" // Make the colored bar start exactly at axis
+        "  margin-left: 0px;"
         "  margin-right: 0px;"
-        "}"
-    );
-    bottomLayout->addWidget(m_positionSlider);
-    
-    // Add left panel to main layout
-    mainLayout->addWidget(leftPanel, 3); // Set stretch to 3 for left panel
-    
-    // Create the right panel for statistics with Material Design appearance
-    QFrame *rightPanel = new QFrame();
-    rightPanel->setFrameShape(QFrame::StyledPanel);
-    rightPanel->setFrameShadow(QFrame::Plain);
-    rightPanel->setStyleSheet("background-color: #ffffff; border-radius: 4px;");
-    rightPanel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-    rightPanel->setMinimumWidth(250); // Set minimum width for the stats panel
-    
-    QVBoxLayout *rightLayout = new QVBoxLayout(rightPanel);
-    rightLayout->setContentsMargins(16, 16, 16, 16);
-    
-    // Create the statistics title
-    QLabel *statsTitle = new QLabel("Track Statistics");
-    statsTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #2196F3; margin-bottom: 12px;");
-    rightLayout->addWidget(statsTitle);
-    
-    // Create the elevation label with Material Design typography
-    m_elevationLabel = new QLabel();
-    m_elevationLabel->setTextFormat(Qt::RichText);
-    m_elevationLabel->setWordWrap(true);
-    m_elevationLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
-    m_elevationLabel->setStyleSheet("color: #424242; padding: 8px 0px;");
-    rightLayout->addWidget(m_elevationLabel);
-    
-    // Add spacer to push stats to the top
-    rightLayout->addStretch();
-    
-    // Add right panel to main layout
-    mainLayout->addWidget(rightPanel, 1); // Set stretch to 1 for right panel
+        "}").arg(yAxisWidth).arg(rightMargin));
     
     // Create toolbar with Material Design-inspired styling
     QToolBar *toolBar = addToolBar("Main Toolbar");
@@ -253,21 +228,21 @@ void MainWindow::setupUi() {
     
     // Connect zoom buttons to map
     connect(zoomInAction, &QAction::triggered, [this]() {
-        // Create wheel event with correct parameters for this Qt version
+        // Create wheel event with correct parameters for Qt
         QPointF pos(m_mapView->width()/2, m_mapView->height()/2);
         QPointF globalPos = m_mapView->mapToGlobal(pos.toPoint());
         QPoint pixelDelta(0, 0);
         QPoint angleDelta(0, 120);
         Qt::MouseButtons buttons = Qt::NoButton;
         Qt::KeyboardModifiers modifiers = Qt::NoModifier;
-        QWheelEvent wheelEvent(pos, globalPos, pixelDelta, angleDelta, 
-                               buttons, modifiers, Qt::NoScrollPhase, false,
-                               Qt::MouseEventNotSynthesized); // Add source parameter
+        QWheelEvent wheelEvent(pos, globalPos, pixelDelta, angleDelta,
+                           buttons, modifiers, Qt::NoScrollPhase, false,
+                           Qt::MouseEventNotSynthesized);
         QCoreApplication::sendEvent(m_mapView, &wheelEvent);
     });
     
     connect(zoomOutAction, &QAction::triggered, [this]() {
-        // Create wheel event with correct parameters for this Qt version
+        // Create wheel event with correct parameters for Qt
         QPointF pos(m_mapView->width()/2, m_mapView->height()/2);
         QPointF globalPos = m_mapView->mapToGlobal(pos.toPoint());
         QPoint pixelDelta(0, 0);
@@ -275,8 +250,8 @@ void MainWindow::setupUi() {
         Qt::MouseButtons buttons = Qt::NoButton;
         Qt::KeyboardModifiers modifiers = Qt::NoModifier;
         QWheelEvent wheelEvent(pos, globalPos, pixelDelta, angleDelta,
-                               buttons, modifiers, Qt::NoScrollPhase, false,
-                               Qt::MouseEventNotSynthesized); // Add source parameter
+                           buttons, modifiers, Qt::NoScrollPhase, false,
+                           Qt::MouseEventNotSynthesized);
         QCoreApplication::sendEvent(m_mapView, &wheelEvent);
     });
     
@@ -285,146 +260,54 @@ void MainWindow::setupUi() {
     
     // Set up position slider
     connect(m_positionSlider, &QSlider::valueChanged, this, &MainWindow::updatePosition);
-    m_updateTimer.setSingleShot(true);
-    m_updateTimer.setInterval(100); // 100ms delay for smooth interaction
-    connect(&m_updateTimer, &QTimer::timeout, this, &MainWindow::updateDisplay);
 }
 
 void MainWindow::openFile() {
-    QString fileName = QFileDialog::getOpenFileName(this, "Open GPX File", 
-                                                  QString(), "GPX Files (*.gpx);;All Files (*)");
-    if (fileName.isEmpty()) {
+    QString filename = QFileDialog::getOpenFileName(this,
+                                                   "Open GPX File",
+                                                   QString(),
+                                                   "GPX Files (*.gpx);;All Files (*)");
+    if (filename.isEmpty()) {
         return;
     }
     
-    // Parse the GPX file
-    QElapsedTimer timer;
-    timer.start();
-    bool success = m_gpxParser.parse(fileName);
-    qDebug() << "GPX parsing took" << timer.elapsed() << "ms";
-    
-    if (!success || m_gpxParser.getPoints().empty()) {
-        QMessageBox::warning(this, "Error", "Failed to load valid GPX data from the file.");
-        return;
-    }
-    
-    // Set the route on the map
-    std::vector<QGeoCoordinate> coordinates;
-    coordinates.reserve(m_gpxParser.getPoints().size());
-    
-    for (const auto& point : m_gpxParser.getPoints()) {
-        coordinates.push_back(point.coord);
-    }
-    
-    m_mapView->setRoute(coordinates);
-    
-    // Plot elevation profile
-    plotElevationProfile();
-    
-    // Set up position slider
-    m_positionSlider->setRange(0, 1000); // Use 0-1000 for smooth percentage representation
-    m_positionSlider->setValue(0);
-    m_positionSlider->setEnabled(true);
-    
-    // Update display
-    m_currentPointIndex = 0;
-    updatePosition(0); // Initialize with first point
-    
-    // Update status bar
-    QFileInfo fileInfo(fileName);
-    statusBar()->showMessage(QString("Loaded %1 data points from %2")
-                           .arg(m_gpxParser.getPoints().size())
-                           .arg(fileInfo.fileName()));
-}
-
-void MainWindow::updatePosition(int value) {
-    // Convert slider position (0-1000) to percentage of total distance
-    double percentage = value / 1000.0;
-    
-    const std::vector<TrackPoint>& points = m_gpxParser.getPoints();
-    if (points.empty()) {
-        return;
-    }
-    
-    // Get total distance
-    double totalDistance = points.back().distance;
-    
-    // Calculate target distance - with safety bounds check
-    double targetDistance = totalDistance * percentage;
-    
-    // Use a faster method to find the closest point - binary search for performance
-    size_t nearestIndex = findClosestPointByDistance(targetDistance);
-    
-    // Only update if position changed
-    if (m_currentPointIndex != nearestIndex) {
-        m_currentPointIndex = nearestIndex;
+    if (m_gpxParser.parse(filename)) {
+        const std::vector<TrackPoint>& points = m_gpxParser.getPoints();
         
-        // Update with the new point data
-        const TrackPoint& point = points[m_currentPointIndex];
-        m_mapView->updateMarker(point.coord);
-        updatePlotPosition(point);
+        if (points.empty()) {
+            statusBar()->showMessage("No track points found in GPX file", 3000);
+            return;
+        }
         
-        // Update statistics display
-        double currentDistance = point.distance * 0.000621371; // meters to miles
-        double totalDistanceMiles = totalDistance * 0.000621371; // meters to miles
-        double elevationGain = m_gpxParser.getCumulativeElevationGain(m_currentPointIndex); // already in feet
-        double currentElevation = point.elevation * 3.28084; // meters to feet
+        // Create route on map
+        std::vector<QGeoCoordinate> coordinates;
+        coordinates.reserve(points.size());
         
-        m_elevationLabel->setText(
-            QString("<div style='font-size: 14px;'>"
-                    "<b>Distance:</b> %1 / %2 mi<br>"
-                    "<b>Elevation:</b> %3 ft<br>"
-                    "<b>Elevation Gain:</b> %4 ft<br>"
-                    "<b>Coordinates:</b><br>%5°, %6°"
-                    "</div>")
-            .arg(currentDistance, 0, 'f', 2)
-            .arg(totalDistanceMiles, 0, 'f', 2)
-            .arg(currentElevation, 0, 'f', 1)
-            .arg(elevationGain, 0, 'f', 1)
-            .arg(point.coord.latitude(), 0, 'f', 6)
-            .arg(point.coord.longitude(), 0, 'f', 6)
-        );
+        for (const auto& point : points) {
+            coordinates.push_back(point.coord);
+        }
+        
+        m_mapView->setRoute(coordinates);
+        
+        // Plot elevation profile
+        plotElevationProfile();
+        
+        // Set up position slider
+        m_positionSlider->setRange(0, 1000);
+        m_positionSlider->setValue(0);
+        m_positionSlider->setEnabled(true);
+        
+        // Update display
+        m_currentPointIndex = 0;
+        updatePosition(0);
+        
+        // Update track info in stats widget
+        m_statsWidget->setTrackInfo(m_gpxParser);
+        
+        statusBar()->showMessage(QString("Loaded %1 with %2 points").arg(QFileInfo(filename).fileName()).arg(points.size()), 3000);
+    } else {
+        statusBar()->showMessage("Failed to load GPX file", 3000);
     }
-}
-
-void MainWindow::updateDisplay() {
-    const std::vector<TrackPoint>& points = m_gpxParser.getPoints();
-    if (points.empty() || m_pendingSliderValue < 0 || 
-        m_pendingSliderValue >= static_cast<int>(points.size())) {
-        return;
-    }
-    
-    // Update current point index
-    m_currentPointIndex = m_pendingSliderValue;
-    const TrackPoint& point = points[m_currentPointIndex];
-    
-    // Update marker position on map
-    m_mapView->updateMarker(point.coord);
-    
-    // Update position on elevation graph
-    updatePlotPosition(point);
-    
-    // Update statistics with imperial units
-    double totalDistance = m_gpxParser.getTotalDistance(); // miles
-    double currentDistance = point.distance * 0.000621371; // meters to miles
-    double elevationGain = m_gpxParser.getCumulativeElevationGain(m_currentPointIndex); // feet
-    double currentElevation = point.elevation * 3.28084; // meters to feet
-    
-    // Format statistics with Material Design typography
-    m_elevationLabel->setText(
-        QString("<div style='font-size: 14px;'>"
-                "<b>Distance:</b> %1 / %2 mi<br>"
-                "<b>Elevation:</b> %3 ft<br>"
-                "<b>Elevation Gain:</b> %4 ft<br>"
-                "<b>Coordinates:</b><br>%5°, %6°"
-                "</div>")
-        .arg(currentDistance, 0, 'f', 2)
-        .arg(totalDistance, 0, 'f', 2)
-        .arg(currentElevation, 0, 'f', 1)
-        .arg(elevationGain, 0, 'f', 1)
-        .arg(point.coord.latitude(), 0, 'f', 6)
-        .arg(point.coord.longitude(), 0, 'f', 6)
-    );
 }
 
 void MainWindow::plotElevationProfile() {
@@ -460,17 +343,22 @@ void MainWindow::plotElevationProfile() {
     // X-axis range is from 0 to max distance
     m_elevationPlot->xAxis->setRange(0, distances.last());
     
-    // Now update the slider margins to match the plot axis rect margins exactly
-    int leftAxisMargin = m_elevationPlot->axisRect()->margins().left();
-    int rightAxisMargin = m_elevationPlot->axisRect()->margins().right();
+    // Make sure plot takes full width
+    m_elevationPlot->axisRect()->setAutoMargins(QCP::msBottom|QCP::msTop);
+    m_elevationPlot->axisRect()->setMargins(QMargins(50, 0, 50, 0));
     
+    // Get Y-axis width to match slider with plot area
+    int yAxisWidth = m_elevationPlot->yAxis->axisRect()->left();
+    int rightMargin = m_elevationPlot->width() - m_elevationPlot->axisRect()->right();
+    
+    // Update slider style to match plot axes exactly
     m_positionSlider->setStyleSheet(
-        "QSlider::groove:horizontal {"
+        QString("QSlider::groove:horizontal {"
         "  height: 4px;"
         "  background: #e0e0e0;"
         "  border-radius: 2px;"
-        "  margin-left: " + QString::number(leftAxisMargin) + "px;" // Match Y axis exactly
-        "  margin-right: " + QString::number(rightAxisMargin) + "px;" // Match right edge exactly
+        "  margin-left: %1px;" // Match left edge of plot axis rect
+        "  margin-right: %2px;" // Match right edge of plot axis rect
         "}"
         "QSlider::handle:horizontal {"
         "  background: #2196F3;"
@@ -483,10 +371,9 @@ void MainWindow::plotElevationProfile() {
         "QSlider::sub-page:horizontal {"
         "  background: #2196F3;"
         "  border-radius: 2px;"
-        "  margin-left: 0px;" // Make the colored bar start exactly at axis
+        "  margin-left: 0px;"
         "  margin-right: 0px;"
-        "}"
-    );
+        "}").arg(yAxisWidth).arg(rightMargin));
     
     // Set up the position marker point (second graph)
     // Initialize with the first point
@@ -499,6 +386,38 @@ void MainWindow::plotElevationProfile() {
     
     // Refresh the plot
     m_elevationPlot->replot();
+}
+
+void MainWindow::updatePosition(int value) {
+    // Convert slider position (0-1000) to percentage of total distance
+    double percentage = value / 1000.0;
+    
+    // Find nearest track point to this percentage of total distance
+    const std::vector<TrackPoint>& points = m_gpxParser.getPoints();
+    if (points.empty()) {
+        return;
+    }
+    
+    // Get total distance
+    double totalDistance = points.back().distance;
+    
+    // Calculate target distance
+    double targetDistance = totalDistance * percentage;
+    
+    // Find closest point using binary search
+    size_t nearestIndex = findClosestPointByDistance(targetDistance);
+    
+    // Update if the point changed
+    if (m_currentPointIndex != nearestIndex) {
+        m_currentPointIndex = nearestIndex;
+        
+        const TrackPoint& point = points[m_currentPointIndex];
+        m_mapView->updateMarker(point.coord);
+        updatePlotPosition(point);
+        
+        // Update statistics display via the stats widget
+        m_statsWidget->updatePosition(point, m_currentPointIndex, m_gpxParser);
+    }
 }
 
 void MainWindow::updatePlotPosition(const TrackPoint& point) {
@@ -516,44 +435,6 @@ void MainWindow::updatePlotPosition(const TrackPoint& point) {
     m_elevationPlot->replot(QCustomPlot::rpQueuedReplot);
 }
 
-size_t MainWindow::findClosestPoint(double targetDistance) {
-    const std::vector<TrackPoint>& points = m_gpxParser.getPoints();
-    if (points.empty()) {
-        return 0;
-    }
-    
-    // Simple binary search to find the closest point to the target distance
-    size_t low = 0;
-    size_t high = points.size() - 1;
-    
-    while (low < high) {
-        size_t mid = (low + high) / 2;
-        double midDistance = points[mid].distance;
-        
-        if (std::abs(midDistance - targetDistance) < 0.1) {
-            return mid; // Close enough
-        }
-        
-        if (midDistance < targetDistance) {
-            low = mid + 1;
-        } else {
-            high = mid;
-        }
-    }
-    
-    // If we're still not sure, check which one is closer
-    if (low > 0) {
-        double distLow = std::abs(points[low-1].distance - targetDistance);
-        double distHigh = std::abs(points[low].distance - targetDistance);
-        if (distLow < distHigh) {
-            return low-1;
-        }
-    }
-    
-    return low;
-}
-
-// Binary search implementation for faster point finding - much more efficient than linear search
 size_t MainWindow::findClosestPointByDistance(double targetDistance) {
     const std::vector<TrackPoint>& points = m_gpxParser.getPoints();
     if (points.empty()) {

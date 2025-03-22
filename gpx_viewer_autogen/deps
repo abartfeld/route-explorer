@@ -2,19 +2,19 @@ gpx_viewer_autogen/timestamp: \
 	/home/abartfeld/test/CMakeFiles/3.30.3/CMakeCXXCompiler.cmake \
 	/home/abartfeld/test/CMakeFiles/3.30.3/CMakeSystem.cmake \
 	/home/abartfeld/test/CMakeLists.txt \
-	/home/abartfeld/test/MapWidget.cpp \
-	/home/abartfeld/test/MapWidget.h \
-	/home/abartfeld/test/TrackStatsWidget.cpp \
-	/home/abartfeld/test/TrackStatsWidget.h \
 	/home/abartfeld/test/gpx_viewer_autogen/moc_predefs.h \
-	/home/abartfeld/test/gpxparser.cpp \
-	/home/abartfeld/test/gpxparser.h \
-	/home/abartfeld/test/main.cpp \
-	/home/abartfeld/test/mainwindow.cpp \
-	/home/abartfeld/test/mainwindow.h \
-	/home/abartfeld/test/qcustomplot.cpp \
-	/home/abartfeld/test/qcustomplot.h \
-	/home/abartfeld/test/resources.qrc \
+	/home/abartfeld/test/include/MapWidget.h \
+	/home/abartfeld/test/include/TrackStatsWidget.h \
+	/home/abartfeld/test/include/gpxparser.h \
+	/home/abartfeld/test/include/mainwindow.h \
+	/home/abartfeld/test/resources/resources.qrc \
+	/home/abartfeld/test/src/MapWidget.cpp \
+	/home/abartfeld/test/src/TrackStatsWidget.cpp \
+	/home/abartfeld/test/src/gpxparser.cpp \
+	/home/abartfeld/test/src/main.cpp \
+	/home/abartfeld/test/src/mainwindow.cpp \
+	/home/abartfeld/test/third_party/qcustomplot.cpp \
+	/home/abartfeld/test/third_party/qcustomplot.h \
 	/usr/include/GL/gl.h \
 	/usr/include/asm-generic/errno-base.h \
 	/usr/include/asm-generic/errno.h \
