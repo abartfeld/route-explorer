@@ -98,18 +98,18 @@ void MainWindow::setupUi() {
     setWindowIcon(QIcon(":/icons/map-marker.svg"));
     setUnifiedTitleAndToolBarOnMac(true);
     
-    // Create the central widget with horizontal layout
+    // Create the central widget with vertical layout
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
-    QHBoxLayout *mainLayout = new QHBoxLayout(centralWidget);
+    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setContentsMargins(12, 12, 12, 12);
     mainLayout->setSpacing(12);
     
-    // Create left side layout that will contain map and elevation profile
-    QWidget *leftPanel = new QWidget();
-    QVBoxLayout *leftLayout = new QVBoxLayout(leftPanel);
-    leftLayout->setContentsMargins(0, 0, 0, 0);
-    leftLayout->setSpacing(12);
+    // Upper panel with map and stats side by side
+    QWidget *upperPanel = new QWidget();
+    QHBoxLayout *upperLayout = new QHBoxLayout(upperPanel);
+    upperLayout->setContentsMargins(0, 0, 0, 0);
+    upperLayout->setSpacing(12);
     
     // Create the map widget
     m_mapView = new MapWidget(this);
@@ -120,14 +120,21 @@ void MainWindow::setupUi() {
     QVBoxLayout *mapLayout = new QVBoxLayout(mapFrame);
     mapLayout->setContentsMargins(0, 0, 0, 0);
     mapLayout->addWidget(m_mapView);
-    leftLayout->addWidget(mapFrame, 7); // Map gets 7/10 of vertical space
+    upperLayout->addWidget(mapFrame, 1); // Map gets stretch priority
+    
+    // Create the stats widget
+    m_statsWidget = new TrackStatsWidget(this);
+    upperLayout->addWidget(m_statsWidget, 0); // No stretch - fixed width
+    
+    // Add the upper panel to main layout
+    mainLayout->addWidget(upperPanel, 7); // Upper panel gets 7/10 of vertical space
     
     // Create the bottom panel containing the elevation profile
     QWidget *bottomPanel = new QWidget();
     QVBoxLayout *bottomLayout = new QVBoxLayout(bottomPanel);
     bottomLayout->setContentsMargins(0, 0, 0, 0);
     bottomLayout->setSpacing(8);
-    leftLayout->addWidget(bottomPanel, 3); // Elevation gets 3/10 of vertical space
+    mainLayout->addWidget(bottomPanel, 3); // Elevation gets 3/10 of vertical space
     
     // Create the elevation profile plot with themed colors
     m_elevationPlot = new QCustomPlot();
@@ -164,9 +171,9 @@ void MainWindow::setupUi() {
     m_elevationPlot->setInteraction(QCP::iRangeDrag, false);
     m_elevationPlot->setInteraction(QCP::iRangeZoom, false);
     
-    // Adjust the plot margins to match slider
+    // Adjust the plot margins to take full width
     m_elevationPlot->axisRect()->setAutoMargins(QCP::msBottom|QCP::msTop);
-    m_elevationPlot->axisRect()->setMargins(QMargins(50, 0, 50, 0));
+    m_elevationPlot->axisRect()->setMargins(QMargins(50, 10, 10, 20)); // Left margin for Y-axis
     
     bottomLayout->addWidget(m_elevationPlot);
     
@@ -176,24 +183,17 @@ void MainWindow::setupUi() {
     
     bottomLayout->addWidget(m_positionSlider);
     
-    // Add left panel to main layout, with stretch factor
-    mainLayout->addWidget(leftPanel, 1);
-    
-    // Create the stats widget
-    m_statsWidget = new TrackStatsWidget(this);
-    mainLayout->addWidget(m_statsWidget, 0); // 0 stretch means it won't expand
-    
     // Update slider style after plot is created
-    int yAxisWidth = m_elevationPlot->yAxis->axisRect()->left();
-    int rightMargin = m_elevationPlot->width() - m_elevationPlot->axisRect()->right();
+    int yAxisPos = m_elevationPlot->yAxis->axisRect()->left();
+    int rightMargin = 10; // Small right margin
     
     m_positionSlider->setStyleSheet(
         QString("QSlider::groove:horizontal {"
         "  height: 4px;"
         "  background: #e0e0e0;"
         "  border-radius: 2px;"
-        "  margin-left: %1px;" // Match left edge of plot axis rect
-        "  margin-right: %2px;" // Match right edge of plot axis rect
+        "  margin-left: %1px;" // Align with Y-axis exactly
+        "  margin-right: %2px;" // Small right margin
         "}"
         "QSlider::handle:horizontal {"
         "  background: #2196F3;"
@@ -206,9 +206,7 @@ void MainWindow::setupUi() {
         "QSlider::sub-page:horizontal {"
         "  background: #2196F3;"
         "  border-radius: 2px;"
-        "  margin-left: 0px;"
-        "  margin-right: 0px;"
-        "}").arg(yAxisWidth).arg(rightMargin));
+        "}").arg(yAxisPos).arg(rightMargin));
     
     // Create toolbar with Material Design-inspired styling
     QToolBar *toolBar = addToolBar("Main Toolbar");
@@ -343,22 +341,24 @@ void MainWindow::plotElevationProfile() {
     // X-axis range is from 0 to max distance
     m_elevationPlot->xAxis->setRange(0, distances.last());
     
-    // Make sure plot takes full width
+    // Make sure plot takes full width - update the margins
+    m_elevationPlot->setViewport(QRect(0, 0, m_elevationPlot->width(), m_elevationPlot->height()));
     m_elevationPlot->axisRect()->setAutoMargins(QCP::msBottom|QCP::msTop);
-    m_elevationPlot->axisRect()->setMargins(QMargins(50, 0, 50, 0));
+    m_elevationPlot->axisRect()->setMargins(QMargins(50, 10, 10, 20)); // Adjust left margin for Y-axis
     
-    // Get Y-axis width to match slider with plot area
-    int yAxisWidth = m_elevationPlot->yAxis->axisRect()->left();
-    int rightMargin = m_elevationPlot->width() - m_elevationPlot->axisRect()->right();
+    // Get Y-axis position to match slider with plot area
+    // This gets the exact position of the y-axis line
+    int yAxisPos = m_elevationPlot->yAxis->axisRect()->left();
+    int rightMargin = 10; // Small right margin
     
-    // Update slider style to match plot axes exactly
+    // Update slider style to align with Y-axis exactly
     m_positionSlider->setStyleSheet(
         QString("QSlider::groove:horizontal {"
         "  height: 4px;"
         "  background: #e0e0e0;"
         "  border-radius: 2px;"
-        "  margin-left: %1px;" // Match left edge of plot axis rect
-        "  margin-right: %2px;" // Match right edge of plot axis rect
+        "  margin-left: %1px;" // Align with Y-axis exactly
+        "  margin-right: %2px;" // Small right margin
         "}"
         "QSlider::handle:horizontal {"
         "  background: #2196F3;"
@@ -371,9 +371,7 @@ void MainWindow::plotElevationProfile() {
         "QSlider::sub-page:horizontal {"
         "  background: #2196F3;"
         "  border-radius: 2px;"
-        "  margin-left: 0px;"
-        "  margin-right: 0px;"
-        "}").arg(yAxisWidth).arg(rightMargin));
+        "}").arg(yAxisPos).arg(rightMargin));
     
     // Set up the position marker point (second graph)
     // Initialize with the first point
@@ -384,7 +382,7 @@ void MainWindow::plotElevationProfile() {
         m_elevationPlot->graph(1)->setData(x, y);
     }
     
-    // Refresh the plot
+    // Force the plot to update
     m_elevationPlot->replot();
 }
 

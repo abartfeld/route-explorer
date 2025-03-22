@@ -2,6 +2,7 @@
 #include <QGeoCoordinate>
 #include <QString>
 #include <QXmlStreamReader>
+#include <QDateTime>
 #include <vector>
 #include <memory>
 
@@ -12,13 +13,14 @@ struct TrackPoint {
     QGeoCoordinate coord;     ///< Geographical coordinates (lat/lon)
     double elevation = 0.0;   ///< Elevation in meters
     double distance = 0.0;    ///< Cumulative distance in meters from start
+    QDateTime timestamp;      ///< Timestamp of the track point
     
     // Default constructor
     TrackPoint() = default;
     
     // Constructor with all fields
-    TrackPoint(const QGeoCoordinate& c, double elev, double dist) :
-        coord(c), elevation(elev), distance(dist) {}
+    TrackPoint(const QGeoCoordinate& c, double elev, double dist, const QDateTime& time = QDateTime()) :
+        coord(c), elevation(elev), distance(dist), timestamp(time) {}
 };
 
 /**

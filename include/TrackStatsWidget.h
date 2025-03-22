@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 #include <QGridLayout>
 #include <QtMath>
+#include <QDateTime>
 #include "gpxparser.h"
 
 class TrackStatsWidget : public QWidget
@@ -32,7 +33,8 @@ private:
     QLabel* m_distanceLabel;
     QLabel* m_elevationLabel;
     QLabel* m_elevGainLabel;
-    QLabel* m_coordinatesLabel;
+    QLabel* m_latitudeLabel;  // Separate label for latitude
+    QLabel* m_longitudeLabel; // Separate label for longitude
     
     // Overall track information
     QLabel* m_trackTitle;
@@ -40,9 +42,9 @@ private:
     QLabel* m_maxElevationLabel;
     QLabel* m_minElevationLabel;
     QLabel* m_totalElevGainLabel;
-    QLabel* m_avgSpeedLabel;
-    QLabel* m_startTimeLabel;
-    QLabel* m_durationLabel;
+    QLabel* m_uphillPercentLabel;
+    QLabel* m_downhillPercentLabel;
+    QLabel* m_flatPercentLabel;
     
     // Helper function to create stats sections
     QWidget* createStatsSection(const QString& title, QLabel** labelArray, const QStringList& labelTexts);

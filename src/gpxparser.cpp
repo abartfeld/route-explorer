@@ -2,6 +2,7 @@
 #include <QFile>
 #include <QXmlStreamReader>
 #include <QDebug>
+#include <QDateTime>  // Add this include for QDateTime
 
 // Add constants for unit conversion
 namespace {
@@ -124,16 +125,16 @@ double GPXParser::getCumulativeElevationGain(int upToIndex) const {
         }
     }
     
-    // Convert to feet
-    return elevationGain * METERS_TO_FEET;
+    // Return in meters (don't convert to feet here - that's done in the UI layer)
+    return elevationGain;
 }
 
 double GPXParser::getTotalDistance() const {
     if (m_points.empty()) {
         return 0.0;
     }
-    // Convert to miles
-    return m_points.back().distance * METERS_TO_MILES;
+    // Return in meters (don't convert to miles here - that's done in the UI layer)
+    return m_points.back().distance;
 }
 
 double GPXParser::getTotalElevationGain() const {
@@ -174,8 +175,9 @@ bool GPXParser::processTrackPoint(QXmlStreamReader& xml) {
     
     QGeoCoordinate coord(lat, lon);
     
-    // Find the elevation
+    // Find the elevation and timestamp
     double elevation = 0.0;
+    QDateTime timestamp;
     
     // Process all elements within the trackpoint
     while (!(xml.isEndElement() && xml.name() == QLatin1String("trkpt"))) {
@@ -189,13 +191,20 @@ bool GPXParser::processTrackPoint(QXmlStreamReader& xml) {
                 if (ok) {
                     elevation = ele;
                 }
+            } else if (xml.name() == QLatin1String("time")) {
+                QString timeText = xml.readElementText();
+                // Parse ISO 8601 timestamp (format: yyyy-MM-ddTHH:mm:ssZ)
+                timestamp = QDateTime::fromString(timeText, Qt::ISODate);
+                if (!timestamp.isValid()) {
+                    // Try alternate format without Z
+                    timestamp = QDateTime::fromString(timeText, "yyyy-MM-ddTHH:mm:ss");
+                }
             }
-            // Can add time or other trackpoint data processing here if needed
         }
     }
     
     // Create and add the track point
-    TrackPoint point(coord, elevation, 0.0); // Distance will be calculated later
+    TrackPoint point(coord, elevation, 0.0, timestamp); // Distance will be calculated later
     m_points.push_back(point);
     
     return true;
