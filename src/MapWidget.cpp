@@ -14,8 +14,10 @@ const QString TILE_SERVER = "https://a.tile.openstreetmap.org/%1/%2/%3.png";
 
 MapWidget::MapWidget(QWidget* parent) : QWidget(parent),
     mZoom(5),
+    mCenterCoordinate(39.8283, -98.5795), // Initialize to center on continental US
     mIsPanning(false),
     mLastMousePos(0, 0),
+    mHasSegments(false),
     mNetworkManager(new QNetworkAccessManager(this)),
     mTileCache(200) // Cache up to 200 tiles
 {
@@ -23,9 +25,6 @@ MapWidget::MapWidget(QWidget* parent) : QWidget(parent),
     setAttribute(Qt::WA_OpaquePaintEvent);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-    
-    // Initialize to center on continental US
-    mCenterCoordinate = QGeoCoordinate(39.8283, -98.5795);
     
     // Initialize route and marker
     mRouteCoordinates.clear();
@@ -86,6 +85,112 @@ void MapWidget::setRoute(const std::vector<QGeoCoordinate>& coordinates) {
     update();
 }
 
+void MapWidget::setRouteWithSegments(const std::vector<QGeoCoordinate>& coordinates, 
+                                    const std::vector<TrackSegment>& segments,
+                                    const std::vector<TrackPoint>& points) {
+    // Clear previous route data
+    mRouteCoordinates.clear();
+    mRouteSegments.clear();
+    
+    if (coordinates.empty()) {
+        mHasSegments = false;
+        return;
+    }
+    
+    // Always store the full route coordinates for fallback rendering
+    for (const auto& coord : coordinates) {
+        mRouteCoordinates.append(coord);
+    }
+    
+    // Create colored segments if available
+    if (!segments.empty() && !points.empty()) {
+        // Create a boolean array to track which points are covered by segments
+        std::vector<bool> coveredPoints(points.size(), false);
+        
+        // First pass: Create segments from the TrackSegment data
+        for (const auto& segment : segments) {
+            RouteSegment routeSegment;
+            routeSegment.color = getSegmentColor(segment);
+            
+            // Extract points for this segment
+            for (size_t i = segment.startIndex; i <= segment.endIndex && i < points.size(); i++) {
+                routeSegment.coordinates.append(points[i].coord);
+                coveredPoints[i] = true;
+            }
+            
+            if (routeSegment.coordinates.size() > 1) {
+                mRouteSegments.append(routeSegment);
+            }
+        }
+        
+        // Second pass: Create segments for uncovered parts of the route
+        if (std::find(coveredPoints.begin(), coveredPoints.end(), false) != coveredPoints.end()) {
+            RouteSegment unclassifiedSegment;
+            unclassifiedSegment.color = QColor("#A0A0A0"); // Gray for unclassified parts
+            
+            for (size_t i = 0; i < points.size(); i++) {
+                if (!coveredPoints[i]) {
+                    unclassifiedSegment.coordinates.append(points[i].coord);
+                } else if (!unclassifiedSegment.coordinates.isEmpty()) {
+                    // End current unclassified segment and add it if it has at least 2 points
+                    if (unclassifiedSegment.coordinates.size() > 1) {
+                        mRouteSegments.append(unclassifiedSegment);
+                    }
+                    unclassifiedSegment.coordinates.clear();
+                }
+            }
+            
+            // Add final unclassified segment if it exists
+            if (unclassifiedSegment.coordinates.size() > 1) {
+                mRouteSegments.append(unclassifiedSegment);
+            }
+        }
+        
+        mHasSegments = !mRouteSegments.isEmpty();
+    } else {
+        mHasSegments = false;
+    }
+    
+    // Calculate bounds of the route and center the map
+    double minLat = coordinates[0].latitude();
+    double maxLat = minLat;
+    double minLon = coordinates[0].longitude();
+    double maxLon = minLon;
+    
+    // Find the actual bounds
+    for (const auto& coord : coordinates) {
+        if (coord.latitude() < minLat) minLat = coord.latitude();
+        else if (coord.latitude() > maxLat) maxLat = coord.latitude();
+        
+        if (coord.longitude() < minLon) minLon = coord.longitude();
+        else if (coord.longitude() > maxLon) maxLon = coord.longitude();
+    }
+    
+    // Center on the route
+    mCenterCoordinate = QGeoCoordinate((minLat + maxLat) / 2.0, (minLon + maxLon) / 2.0);
+    
+    // Calculate better zoom to fit the route
+    double latSpan = maxLat - minLat;
+    double lonSpan = maxLon - minLon;
+    
+    // Add padding
+    latSpan *= 1.2;
+    lonSpan *= 1.2;
+    
+    // Calculate appropriate zoom level
+    int zoomLat = floor(log2(360.0 / latSpan));
+    int zoomLon = floor(log2(360.0 / lonSpan));
+    mZoom = qMax(1, qMin(18, qMin(zoomLat, zoomLon)));
+    
+    // Set marker to the first point
+    if (!coordinates.empty()) {
+        mCurrentMarkerCoordinate = coordinates[0];
+    }
+    
+    // Schedule a repaint
+    update();
+}
+
 void MapWidget::updateMarker(const QGeoCoordinate& coordinate)
 {
     mCurrentMarkerCoordinate = coordinate;
@@ -143,8 +248,52 @@ void MapWidget::paintEvent(QPaintEvent* event) {
         }
     }
     
-    // Draw the route if we have one - optimize by using path and checking path emptiness first
-    if (mRouteCoordinates.size() > 1) {
+    // Draw the route with segments if available
+    if (mHasSegments && !mRouteSegments.isEmpty()) {
+        // First draw a thicker shadow/outline to make route stand out against map
+        if (mRouteCoordinates.size() > 1) {
+            QPainterPath basePath;
+            bool first = true;
+            
+            for (const auto& coord : mRouteCoordinates) {
+                QPoint point = geoToPixel(coord, mCenterCoordinate, mZoom, size());
+                if (first) {
+                    basePath.moveTo(point);
+                    first = false;
+                } else {
+                    basePath.lineTo(point);
+                }
+            }
+            
+            // Draw an outline/shadow with higher thickness
+            painter.setPen(QPen(QColor(50, 50, 50, 80), 7.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.drawPath(basePath);
+        }
+        
+        // Then draw each segment with its color
+        for (const auto& segment : mRouteSegments) {
+            if (segment.coordinates.size() < 2) continue;
+            
+            QPainterPath path;
+            bool first = true;
+            
+            for (const auto& coord : segment.coordinates) {
+                QPoint point = geoToPixel(coord, mCenterCoordinate, mZoom, size());
+                if (first) {
+                    path.moveTo(point);
+                    first = false;
+                } else {
+                    path.lineTo(point);
+                }
+            }
+            
+            // Draw the segment with enhanced colors
+            QColor enhancedColor = enhanceColor(segment.color);
+            painter.setPen(QPen(enhancedColor, 5.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.drawPath(path);
+        }
+    } else if (mRouteCoordinates.size() > 1) {
+        // Fall back to default styling if no segments - with enhanced visibility
         QPainterPath path;
         bool first = true;
         
@@ -158,23 +307,30 @@ void MapWidget::paintEvent(QPaintEvent* event) {
             }
         }
         
-        // Only draw if path is not empty
-        if (!path.isEmpty()) {
-            painter.setPen(QPen(QColor("#2196F3"), 3.0));
-            painter.drawPath(path);
-        }
+        // Draw route outline/shadow for better contrast
+        painter.setPen(QPen(QColor(0, 0, 0, 80), 7.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.drawPath(path);
+        
+        // Draw the route with enhanced color
+        painter.setPen(QPen(QColor(0, 120, 255), 5.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.drawPath(path);
     }
     
-    // Draw the marker
+    // Draw the marker with improved visibility
     QPoint markerPos = geoToPixel(mCurrentMarkerCoordinate, mCenterCoordinate, mZoom, size());
     
-    // Define marker appearance
-    const int markerSize = 12;
+    // Define marker appearance - make it larger and more visible
+    const int markerSize = 14; // Increased from 12
     QRect markerRect(markerPos.x() - markerSize/2, markerPos.y() - markerSize/2, markerSize, markerSize);
     
-    // Draw a red circle with white border
-    painter.setBrush(QBrush(QColor("#F44336")));
-    painter.setPen(QPen(Qt::white, 2));
+    // Draw a shadow/outline for the marker
+    painter.setPen(QPen(QColor(0, 0, 0, 100), 3));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(markerRect.adjusted(-1, -1, 1, 1));
+    
+    // Draw the marker with bright color
+    painter.setBrush(QBrush(QColor("#FF4136"))); // Brighter red
+    painter.setPen(QPen(Qt::white, 2.5));
     painter.drawEllipse(markerRect);
 }
 
@@ -377,4 +533,49 @@ QGeoCoordinate MapWidget::pixelToGeo(const QPoint& pixel, const QGeoCoordinate& 
     double lat = latRad * 180.0 / M_PI;
     
     return QGeoCoordinate(lat, lon);
+}
+
+QColor MapWidget::getSegmentColor(const TrackSegment& segment) const {
+    // Return color based on segment type and gradient with enhanced visibility
+    QColor color;
+    
+    switch (segment.type) {
+        case TrackSegment::CLIMB:
+            if (segment.avgGradient > 10.0)
+                color = QColor(220, 20, 20);  // Steep climb - deeper red
+            else if (segment.avgGradient > 5.0)
+                color = QColor(255, 140, 0); // Moderate climb - deeper orange
+            else
+                color = QColor(240, 230, 0); // Easy climb - gold-yellow
+            break;
+        case TrackSegment::DESCENT:
+            if (segment.avgGradient < -10.0)
+                color = QColor(128, 0, 128); // Steep descent - purple
+            else if (segment.avgGradient < -5.0)
+                color = QColor(30, 30, 220);   // Moderate descent - deeper blue
+            else
+                color = QColor(100, 180, 255); // Easy descent - brighter blue
+            break;
+        default:
+            color = QColor(0, 160, 0);       // Flat - deeper green
+            break;
+    }
+    
+    return color;
+}
+
+QColor MapWidget::enhanceColor(const QColor& color) const {
+    // Make colors more vibrant
+    QColor enhanced = color;
+    
+    // Increase saturation 
+    int h, s, v, a;
+    enhanced.getHsv(&h, &s, &v, &a);
+    
+    // Boost saturation and value for more vivid colors
+    s = qMin(255, s + 30);
+    v = qMin(255, v + 20);
+    
+    enhanced.setHsv(h, s, v, a);
+    return enhanced;
 }

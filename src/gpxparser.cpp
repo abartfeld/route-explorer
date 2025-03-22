@@ -209,3 +209,37 @@ bool GPXParser::processTrackPoint(QXmlStreamReader& xml) {
     
     return true;
 }
+
+double GPXParser::getGradientAtPoint(int pointIndex) const {
+    if (m_points.empty() || pointIndex <= 0 || pointIndex >= static_cast<int>(m_points.size())) {
+        return 0.0;
+    }
+    
+    // Use a moving average approach for smoother gradient calculation
+    const int window = 3; // Use 3 points on each side (7 total)
+    double sumGradient = 0.0;
+    double sumWeight = 0.0;
+    
+    for (int i = -window; i <= window; i++) {
+        int idx1 = pointIndex + i - 1;
+        int idx2 = pointIndex + i;
+        
+        if (idx1 >= 0 && idx2 < static_cast<int>(m_points.size())) {
+            double distDiff = m_points[idx2].distance - m_points[idx1].distance;
+            double elevDiff = m_points[idx2].elevation - m_points[idx1].elevation;
+            
+            if (distDiff > 0) {
+                // Calculate point-to-point gradient
+                double pointGradient = (elevDiff / distDiff) * 100.0;
+                
+                // Give higher weight to points closer to the target point
+                double weight = 1.0 - std::abs(i) / (window + 1.0);
+                
+                sumGradient += pointGradient * weight;
+                sumWeight += weight;
+            }
+        }
+    }
+    
+    return (sumWeight > 0) ? (sumGradient / sumWeight) : 0.0;
+}

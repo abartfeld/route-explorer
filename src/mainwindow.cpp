@@ -285,7 +285,18 @@ void MainWindow::openFile() {
             coordinates.push_back(point.coord);
         }
         
-        m_mapView->setRoute(coordinates);
+        // First update stats widget to analyze segments
+        m_statsWidget->setTrackInfo(m_gpxParser);
+        
+        // Get segments from stats widget
+        const std::vector<TrackSegment>& segments = m_statsWidget->getSegments();
+        
+        // Use segmented route if available
+        if (!segments.empty()) {
+            m_mapView->setRouteWithSegments(coordinates, segments, points);
+        } else {
+            m_mapView->setRoute(coordinates);
+        }
         
         // Plot elevation profile
         plotElevationProfile();
@@ -298,9 +309,6 @@ void MainWindow::openFile() {
         // Update display
         m_currentPointIndex = 0;
         updatePosition(0);
-        
-        // Update track info in stats widget
-        m_statsWidget->setTrackInfo(m_gpxParser);
         
         statusBar()->showMessage(QString("Loaded %1 with %2 points").arg(QFileInfo(filename).fileName()).arg(points.size()), 3000);
     } else {

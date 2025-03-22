@@ -88,6 +88,13 @@ public:
     double getMinElevation() const;
     
     /**
+     * @brief Get the gradient at a specific point
+     * @param pointIndex Index of the point
+     * @return Gradient as a percentage (rise/run * 100)
+     */
+    double getGradientAtPoint(int pointIndex) const;
+
+    /**
      * @brief Clear all parsed data
      */
     void clear();
