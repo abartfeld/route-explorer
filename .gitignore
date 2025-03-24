@@ -55,7 +55,7 @@ cmake_install.cmake
 .cmake/
 gpx_viewer
 gpx_viewer.exe
-/gpx_viewer_autogen/
+/*_autogen/
 
 # IDE specific files
 .vscode/

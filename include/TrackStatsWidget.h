@@ -43,9 +43,11 @@ public:
     
     // Get analyzed segments for external use
     const std::vector<TrackSegment>& getSegments() const { return m_segments; }
+    
+    // Make toggleUnits public so tests can access it
+    void toggleUnits();
 
 private slots:
-    void toggleUnits();
     void showSegmentDetails(int segmentIndex);
 
 private:

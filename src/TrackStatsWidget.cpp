@@ -12,7 +12,7 @@ TrackStatsWidget::TrackStatsWidget(QWidget *parent) :
     setMaximumWidth(280);
     
     // Set overall background and modern card-like appearance
-    setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);");
+    setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e0e0e0;");
     
     // Main layout
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
@@ -151,7 +151,7 @@ TrackStatsWidget::TrackStatsWidget(QWidget *parent) :
     
     mainLayout->addWidget(segmentContainer);
     
-    // Units toggle button with more modern styling
+    // Units toggle button with modern styling
     m_unitsToggleButton = new QPushButton("Switch to Metric", this);
     m_unitsToggleButton->setStyleSheet(
         "QPushButton {"
@@ -162,14 +162,12 @@ TrackStatsWidget::TrackStatsWidget(QWidget *parent) :
         "  font-weight: bold;"
         "  border: none;"
         "  font-size: 12px;"
-        "  box-shadow: 0 2px 2px rgba(0,0,0,0.1);"
         "}"
         "QPushButton:hover {"
         "  background-color: #1976D2;"
         "}"
         "QPushButton:pressed {"
         "  background-color: #0D47A1;"
-        "  box-shadow: 0 1px 1px rgba(0,0,0,0.1);"
         "}"
     );
     connect(m_unitsToggleButton, &QPushButton::clicked, this, &TrackStatsWidget::toggleUnits);
@@ -248,13 +246,9 @@ QWidget* TrackStatsWidget::createStatsSection(const QString& title, QLabel** lab
 }
 
 void TrackStatsWidget::updateStats(const TrackPoint& point, int pointIndex, const GPXParser& parser) {
-    // Update position-specific stats
     updatePosition(point, pointIndex, parser);
-    
-    // Update track-specific stats (though these don't change with position)
     setTrackInfo(parser);
     
-    // Update mini profile marker position
     if (m_miniProfile->graph(0)->dataCount() > 0) {
         QVector<double> x, y;
         x.append(m_useMetricUnits ? metersToKilometers(point.distance) : metersToMiles(point.distance));
@@ -265,11 +259,9 @@ void TrackStatsWidget::updateStats(const TrackPoint& point, int pointIndex, cons
 }
 
 void TrackStatsWidget::updatePosition(const TrackPoint& point, int pointIndex, const GPXParser& parser) {
-    double totalDistance = parser.getTotalDistance(); // in meters
-    double currentDistance = point.distance; // in meters
-    double elevationGain = parser.getCumulativeElevationGain(pointIndex); // in meters
+    double currentDistance = point.distance;
+    double elevationGain = parser.getCumulativeElevationGain(pointIndex);
     
-    // Calculate current gradient
     double currentGradient = 0.0;
     const std::vector<TrackPoint>& points = parser.getPoints();
     if (pointIndex > 0 && pointIndex < static_cast<int>(points.size())) {
@@ -283,30 +275,25 @@ void TrackStatsWidget::updatePosition(const TrackPoint& point, int pointIndex, c
         }
     }
     
-    // Update current position information - show only current distance (not total)
     m_distanceLabel->setText(formatDistance(currentDistance));
     m_elevationLabel->setText(formatElevation(point.elevation));
     m_elevGainLabel->setText(formatElevation(elevationGain));
     
-    // Set gradient with color coding based on steepness
     m_gradientLabel->setText(formatGradient(currentGradient));
     m_gradientLabel->setStyleSheet(getGradientColorStyle(currentGradient));
     
-    // Convert decimal degrees to degrees, minutes, seconds format for latitude
     double lat = qAbs(point.coord.latitude());
     int latDeg = qFloor(lat);
     int latMin = qFloor((lat - latDeg) * 60.0);
     double latSec = (lat - latDeg - latMin / 60.0) * 3600.0;
     QString latDir = point.coord.latitude() >= 0 ? "N" : "S";
     
-    // Convert decimal degrees to degrees, minutes, seconds format for longitude
     double lon = qAbs(point.coord.longitude());
     int lonDeg = qFloor(lon);
     int lonMin = qFloor((lon - lonDeg) * 60.0);
     double lonSec = (lon - lonDeg - lonMin / 60.0) * 3600.0;
     QString lonDir = point.coord.longitude() >= 0 ? "E" : "W";
     
-    // Set latitude and longitude on separate lines
     m_latitudeLabel->setText(
         QString("%1° %2' %3\"%4")
         .arg(latDeg)
@@ -323,16 +310,13 @@ void TrackStatsWidget::updatePosition(const TrackPoint& point, int pointIndex, c
         .arg(lonDir)
     );
     
-    // Set a slightly smaller font size to ensure the coordinates fit
     m_latitudeLabel->setStyleSheet("color: #212121; font-weight: bold; font-size: 8pt;");
     m_longitudeLabel->setStyleSheet("color: #212121; font-weight: bold; font-size: 8pt;");
     
-    // Highlight active segment in the list
     for (size_t i = 0; i < m_segments.size(); i++) {
         if (pointIndex >= static_cast<int>(m_segments[i].startIndex) && 
             pointIndex <= static_cast<int>(m_segments[i].endIndex)) {
             
-            // Find the corresponding button and update its style
             QWidget* segmentList = m_segmentListWidget;
             for (int j = 0; j < segmentList->layout()->count(); j++) {
                 QPushButton* btn = qobject_cast<QPushButton*>(segmentList->layout()->itemAt(j)->widget());
@@ -345,7 +329,6 @@ void TrackStatsWidget::updatePosition(const TrackPoint& point, int pointIndex, c
                 }
             }
             
-            // Show details for this segment
             showSegmentDetails(i);
             break;
         }
@@ -356,7 +339,6 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
     const std::vector<TrackPoint>& points = parser.getPoints();
     
     if (points.empty()) {
-        // Clear all values when no points
         m_totalDistanceLabel->setText(m_useMetricUnits ? "0.00 km" : "0.00 mi");
         m_maxElevationLabel->setText(m_useMetricUnits ? "0.0 m" : "0.0 ft");
         m_minElevationLabel->setText(m_useMetricUnits ? "0.0 m" : "0.0 ft");
@@ -367,12 +349,10 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
         m_steepestUphillLabel->setText("0.0%");
         m_steepestDownhillLabel->setText("0.0%");
         
-        // Clear mini profile
         m_miniProfile->graph(0)->data()->clear();
         m_miniProfile->graph(1)->data()->clear();
         m_miniProfile->replot();
         
-        // Clear segments
         m_segments.clear();
         QLayoutItem* child;
         while ((child = m_segmentListWidget->layout()->takeAt(0)) != nullptr) {
@@ -384,7 +364,6 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
         return;
     }
     
-    // Analyze segments if this is new data
     static size_t lastPointsCount = 0;
     if (lastPointsCount != points.size()) {
         analyzeSegments(parser);
@@ -393,13 +372,11 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
         lastPointsCount = points.size();
     }
     
-    // Get raw values in meters
-    double totalDistance = parser.getTotalDistance(); // In meters
-    double totalGain = parser.getTotalElevationGain(); // In meters
-    double maxElev = parser.getMaxElevation(); // In meters
-    double minElev = parser.getMinElevation(); // In meters
+    double totalDistance = parser.getTotalDistance();
+    double totalGain = parser.getTotalElevationGain();
+    double maxElev = parser.getMaxElevation();
+    double minElev = parser.getMinElevation();
     
-    // Calculate steepest sections
     double steepestUphill = 0.0;
     double steepestDownhill = 0.0;
     
@@ -411,12 +388,10 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
         }
     }
     
-    // Calculate uphill, downhill, and flat percentages
     double uphillDistance = 0.0;
     double downhillDistance = 0.0;
     double flatDistance = 0.0;
     
-    // Use the segments for this calculation
     for (const auto& segment : m_segments) {
         switch (segment.type) {
             case TrackSegment::CLIMB:
@@ -431,13 +406,11 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
         }
     }
     
-    // Calculate percentages of total distance
     double totalSegmentDistance = uphillDistance + downhillDistance + flatDistance;
     double uphillPercent = (totalSegmentDistance > 0) ? (uphillDistance / totalSegmentDistance) * 100.0 : 0.0;
     double downhillPercent = (totalSegmentDistance > 0) ? (downhillDistance / totalSegmentDistance) * 100.0 : 0.0;
     double flatPercent = (totalSegmentDistance > 0) ? (flatDistance / totalSegmentDistance) * 100.0 : 0.0;
     
-    // Ensure percentages add up to 100% exactly
     double totalPercent = uphillPercent + downhillPercent + flatPercent;
     if (totalPercent > 0) {
         uphillPercent = (uphillPercent / totalPercent) * 100.0;
@@ -445,7 +418,6 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
         flatPercent = (flatPercent / totalPercent) * 100.0;
     }
     
-    // Update statistics with proper units
     m_totalDistanceLabel->setText(formatDistance(totalDistance));
     m_maxElevationLabel->setText(formatElevation(maxElev));
     m_minElevationLabel->setText(formatElevation(minElev));
@@ -454,7 +426,6 @@ void TrackStatsWidget::setTrackInfo(const GPXParser& parser) {
     m_downhillPercentLabel->setText(QString("%1%").arg(downhillPercent, 0, 'f', 1));
     m_flatPercentLabel->setText(QString("%1%").arg(flatPercent, 0, 'f', 1));
     
-    // Update gradient info with color coding
     m_steepestUphillLabel->setText(formatGradient(steepestUphill));
     m_steepestUphillLabel->setStyleSheet(getGradientColorStyle(steepestUphill));
     
@@ -466,7 +437,6 @@ void TrackStatsWidget::toggleUnits() {
     m_useMetricUnits = !m_useMetricUnits;
     m_unitsToggleButton->setText(m_useMetricUnits ? "Switch to Imperial" : "Switch to Metric");
     
-    // Update all displays with new units
     const QMetaObject* meta = metaObject();
     int updateStatsIndex = meta->indexOfMethod("updateStats(const TrackPoint&,int,const GPXParser&)");
     if (updateStatsIndex != -1) {
@@ -474,7 +444,6 @@ void TrackStatsWidget::toggleUnits() {
         method.invoke(this, Qt::DirectConnection);
     }
     
-    // Update the mini profile
     updateMiniProfile(GPXParser());
 }
 
@@ -487,24 +456,18 @@ void TrackStatsWidget::analyzeSegments(const GPXParser& parser) {
     
     m_segments.clear();
     
-    // Calculate smoothed gradients for the entire track
     std::vector<double> smoothGradients = calculateSmoothedGradients(points);
     
-    // Identify potential segment boundaries based on gradient changes
     std::vector<size_t> segmentBoundaries = identifySegmentBoundaries(points, smoothGradients);
     
-    // Create initial segments from boundaries
     std::vector<TrackSegment> rawSegments = createRawSegments(points, smoothGradients, segmentBoundaries);
     
-    // Post-process segments: merge similar adjacent segments, remove tiny segments
     m_segments = optimizeSegments(rawSegments, points);
 }
 
 std::vector<double> TrackStatsWidget::calculateSmoothedGradients(const std::vector<TrackPoint>& points) {
-    // Parameters for gradient smoothing
-    const int WINDOW_SIZE = 9; // Increased window size for smoother gradients
+    const int WINDOW_SIZE = 15;
     
-    // Step 1: Calculate raw point-to-point gradients
     std::vector<double> rawGradients(points.size(), 0.0);
     for (size_t i = 1; i < points.size(); i++) {
         double distDiff = points[i].distance - points[i-1].distance;
@@ -514,7 +477,6 @@ std::vector<double> TrackStatsWidget::calculateSmoothedGradients(const std::vect
         }
     }
     
-    // Step 2: Apply weighted moving average smoothing to gradients
     std::vector<double> smoothGradients(points.size(), 0.0);
     int halfWindow = WINDOW_SIZE / 2;
     
@@ -522,11 +484,10 @@ std::vector<double> TrackStatsWidget::calculateSmoothedGradients(const std::vect
         double sum = 0.0;
         double totalWeight = 0.0;
         
-        // Calculate weighted moving average with Gaussian-like weighting
         for (int j = -halfWindow; j <= halfWindow; j++) {
-            size_t idx = i + j;
-            if (idx >= 0 && idx < points.size()) {
-                // Gaussian-like weight function - higher weight for closer points
+            int signedIdx = static_cast<int>(i) + j;
+            if (signedIdx >= 0 && signedIdx < static_cast<int>(points.size())) {
+                size_t idx = static_cast<size_t>(signedIdx);
                 double weight = exp(-0.5 * pow(j / (halfWindow / 2.0), 2));
                 sum += rawGradients[idx] * weight;
                 totalWeight += weight;
@@ -536,25 +497,41 @@ std::vector<double> TrackStatsWidget::calculateSmoothedGradients(const std::vect
         smoothGradients[i] = (totalWeight > 0) ? (sum / totalWeight) : 0.0;
     }
     
-    return smoothGradients;
+    std::vector<double> doubleSmoothedGradients = smoothGradients;
+    
+    for (size_t i = 0; i < points.size(); i++) {
+        double sum = 0.0;
+        double totalWeight = 0.0;
+        
+        for (int j = -halfWindow/2; j <= halfWindow/2; j++) {
+            int signedIdx = static_cast<int>(i) + j;
+            if (signedIdx >= 0 && signedIdx < static_cast<int>(points.size())) {
+                size_t idx = static_cast<size_t>(signedIdx);
+                double weight = exp(-0.5 * pow(j / (halfWindow / 4.0), 2));
+                sum += smoothGradients[idx] * weight;
+                totalWeight += weight;
+            }
+        }
+        
+        doubleSmoothedGradients[i] = (totalWeight > 0) ? (sum / totalWeight) : 0.0;
+    }
+    
+    return doubleSmoothedGradients;
 }
 
 std::vector<size_t> TrackStatsWidget::identifySegmentBoundaries(
     const std::vector<TrackPoint>& points, 
     const std::vector<double>& smoothGradients)
 {
-    // Parameters for segment detection
-    const double GRADIENT_THRESHOLD_FLAT = 1.0;  // % grade threshold
-    const double SEGMENT_CHANGE_THRESHOLD = 2.0; // Threshold for segment type change
-    const double MIN_SEGMENT_DISTANCE = 402.336; // 0.25 miles in meters
+    const double GRADIENT_THRESHOLD_FLAT = 1.0;
+    const double SEGMENT_CHANGE_THRESHOLD = 3.0;
+    const double MIN_SEGMENT_DISTANCE = 800.0;
     
     std::vector<size_t> boundaries;
-    boundaries.push_back(0); // Start with first point
+    boundaries.push_back(0);
     
-    // Define segment type enumeration for local use
     enum class GradientType { FLAT, CLIMB, DESCENT };
     
-    // Determine initial segment type
     GradientType currentType = GradientType::FLAT;
     if (points.size() > 1) {
         if (smoothGradients[1] > GRADIENT_THRESHOLD_FLAT) {
@@ -564,13 +541,10 @@ std::vector<size_t> TrackStatsWidget::identifySegmentBoundaries(
         }
     }
     
-    // Track persistent gradient changes
-    const int STABILITY_WINDOW = 5;
+    const int STABILITY_WINDOW = 9;
     std::vector<GradientType> recentTypes(STABILITY_WINDOW, currentType);
     
-    // Process points to find major transitions (prefer longer segments)
     for (size_t i = 1; i < points.size(); i++) {
-        // Determine current point's gradient type
         GradientType pointType = GradientType::FLAT;
         if (smoothGradients[i] > GRADIENT_THRESHOLD_FLAT) {
             pointType = GradientType::CLIMB;
@@ -578,48 +552,39 @@ std::vector<size_t> TrackStatsWidget::identifySegmentBoundaries(
             pointType = GradientType::DESCENT;
         }
         
-        // Update rolling window of recent types
         for (int j = 0; j < STABILITY_WINDOW - 1; j++) {
             recentTypes[j] = recentTypes[j + 1];
         }
         recentTypes[STABILITY_WINDOW - 1] = pointType;
         
-        // Check if there's a stable change in gradient type
         bool typeChange = false;
         if (pointType != currentType) {
-            // Count occurrences of new type in the window
             int newTypeCount = 0;
             for (const auto& type : recentTypes) {
                 if (type == pointType) newTypeCount++;
             }
             
-            // Require majority of window to be the new type
-            if (newTypeCount > STABILITY_WINDOW / 2) {
+            if (newTypeCount > STABILITY_WINDOW * 3/4) {
                 typeChange = true;
             }
         }
         
-        // If we detect a real segment transition and have enough distance
         if (typeChange && (i > 0) && 
             (points[i].distance - points[boundaries.back()].distance >= MIN_SEGMENT_DISTANCE)) {
             
-            // Check if gradient change is significant enough
             double avgCurrentGradient = 0.0;
             double avgNewGradient = 0.0;
             
-            // Calculate average gradient of current segment
             for (size_t j = boundaries.back(); j < i; j++) {
                 avgCurrentGradient += smoothGradients[j];
             }
             avgCurrentGradient /= (i - boundaries.back());
             
-            // Calculate average gradient looking ahead
             for (size_t j = i; j < std::min(i + STABILITY_WINDOW, points.size()); j++) {
                 avgNewGradient += smoothGradients[j];
             }
             avgNewGradient /= std::min(STABILITY_WINDOW, static_cast<int>(points.size() - i));
             
-            // Only add boundary if gradient change is significant
             if (std::abs(avgNewGradient - avgCurrentGradient) >= SEGMENT_CHANGE_THRESHOLD) {
                 boundaries.push_back(i);
                 currentType = pointType;
@@ -627,7 +592,6 @@ std::vector<size_t> TrackStatsWidget::identifySegmentBoundaries(
         }
     }
     
-    // Add final point if it's not already included
     if (boundaries.back() != points.size() - 1) {
         boundaries.push_back(points.size() - 1);
     }
@@ -640,27 +604,23 @@ std::vector<TrackSegment> TrackStatsWidget::createRawSegments(
     const std::vector<double>& smoothGradients,
     const std::vector<size_t>& boundaries)
 {
-    const double GRADIENT_THRESHOLD_FLAT = 1.0;  // % grade threshold
-    const size_t MIN_SEGMENT_POINTS = 5;         // minimum points in a segment
-    const double MIN_SEGMENT_DISTANCE = 402.336; // 0.25 miles in meters
+    const double GRADIENT_THRESHOLD_FLAT = 1.0;
+    const size_t MIN_SEGMENT_POINTS = 5;
+    const double MIN_SEGMENT_DISTANCE = 402.336;
     
     std::vector<TrackSegment> segments;
     
-    // Create segments from adjacent boundary pairs
     for (size_t i = 0; i < boundaries.size() - 1; i++) {
         size_t startIdx = boundaries[i];
         size_t endIdx = boundaries[i+1];
         
-        // Ensure segment has minimum length and points
         if (endIdx - startIdx < MIN_SEGMENT_POINTS) continue;
         
         double segmentDistance = points[endIdx].distance - points[startIdx].distance;
         if (segmentDistance < MIN_SEGMENT_DISTANCE) continue;
         
-        // Calculate segment properties
         double segmentElevChange = points[endIdx].elevation - points[startIdx].elevation;
         
-        // Calculate gradient statistics
         double sumGradient = 0.0;
         double maxGradient = -100.0;
         double minGradient = 100.0;
@@ -673,7 +633,6 @@ std::vector<TrackSegment> TrackStatsWidget::createRawSegments(
         
         double avgGradient = sumGradient / (endIdx - startIdx + 1);
         
-        // Determine segment type based on average gradient
         TrackSegment::Type segmentType = TrackSegment::FLAT;
         if (avgGradient > GRADIENT_THRESHOLD_FLAT) {
             segmentType = TrackSegment::CLIMB;
@@ -681,7 +640,6 @@ std::vector<TrackSegment> TrackStatsWidget::createRawSegments(
             segmentType = TrackSegment::DESCENT;
         }
         
-        // Create and add segment
         TrackSegment segment;
         segment.type = segmentType;
         segment.startIndex = startIdx;
@@ -704,11 +662,10 @@ std::vector<TrackSegment> TrackStatsWidget::optimizeSegments(
 {
     if (rawSegments.empty()) return rawSegments;
     
-    // Parameters for segment merging
-    const double SIMILAR_GRADIENT_THRESHOLD = 2.0; // Merge if gradients differ by less than this
-    const double TINY_SEGMENT_THRESHOLD = 200.0;   // Meters - absorb segments smaller than this
+    const double SIMILAR_GRADIENT_THRESHOLD = 4.0;
+    const double TINY_SEGMENT_THRESHOLD = 600.0;
+    const double MEDIUM_SEGMENT_THRESHOLD = 1000.0;
     
-    // First pass: merge adjacent segments of the same type with similar gradients
     std::vector<TrackSegment> mergedSegments;
     TrackSegment currentSegment = rawSegments[0];
     
@@ -716,81 +673,156 @@ std::vector<TrackSegment> TrackStatsWidget::optimizeSegments(
         const TrackSegment& nextSegment = rawSegments[i];
         bool shouldMerge = false;
         
-        // Merge criteria:
-        // 1. Same segment type
-        // 2. Similar gradient OR very short next segment
-        // 3. No type is "overwhelmed" by very different gradient
         if (nextSegment.type == currentSegment.type) {
             double gradientDiff = std::abs(nextSegment.avgGradient - currentSegment.avgGradient);
-            
-            // Always merge flat segments of the same type
-            if (nextSegment.type == TrackSegment::FLAT) {
-                shouldMerge = true;
-            }
-            // For climbs/descents, ensure gradients are similar 
-            // OR next segment is tiny (and should be absorbed)
-            else if (gradientDiff < SIMILAR_GRADIENT_THRESHOLD || 
-                     nextSegment.distance < TINY_SEGMENT_THRESHOLD) {
+            if (gradientDiff < SIMILAR_GRADIENT_THRESHOLD) {
                 shouldMerge = true;
             }
         }
-        // Consider absorbing tiny segments into surrounding ones
-        else if (nextSegment.distance < TINY_SEGMENT_THRESHOLD) {
+        
+        if (!shouldMerge && nextSegment.distance < TINY_SEGMENT_THRESHOLD) {
+            shouldMerge = true;
+        }
+        
+        if (!shouldMerge && 
+            currentSegment.distance < MEDIUM_SEGMENT_THRESHOLD &&
+            nextSegment.distance > currentSegment.distance * 2) {
             shouldMerge = true;
         }
         
         if (shouldMerge) {
-            // Merge by extending current segment
             currentSegment.endIndex = nextSegment.endIndex;
             currentSegment.distance += nextSegment.distance;
             currentSegment.elevationChange += nextSegment.elevationChange;
             
-            // Update min/max gradients
             currentSegment.maxGradient = std::max(currentSegment.maxGradient, nextSegment.maxGradient);
             currentSegment.minGradient = std::min(currentSegment.minGradient, nextSegment.minGradient);
             
-            // Recalculate average gradient for the whole segment
             currentSegment.avgGradient = currentSegment.elevationChange / currentSegment.distance * 100.0;
+            
+            if (nextSegment.type != currentSegment.type) {
+                if (currentSegment.avgGradient > 1.0) {
+                    currentSegment.type = TrackSegment::CLIMB;
+                } else if (currentSegment.avgGradient < -1.0) {
+                    currentSegment.type = TrackSegment::DESCENT;
+                } else {
+                    currentSegment.type = TrackSegment::FLAT;
+                }
+            }
         } else {
-            // Can't merge - add current segment and start a new one
             mergedSegments.push_back(currentSegment);
             currentSegment = nextSegment;
         }
     }
     
-    // Add the last segment
     mergedSegments.push_back(currentSegment);
     
-    // Second pass: re-classify segments based on their actual average gradient
-    // (in case merging changed the character of the segment)
-    const double GRADIENT_THRESHOLD_FLAT = 1.0;
+    if (mergedSegments.size() >= 3) {
+        std::vector<TrackSegment> improvedSegments;
+        
+        for (size_t i = 0; i < mergedSegments.size(); i++) {
+            if (i + 2 < mergedSegments.size()) {
+                TrackSegment& first = mergedSegments[i];
+                TrackSegment& middle = mergedSegments[i + 1];
+                TrackSegment& last = mergedSegments[i + 2];
+                
+                bool isSmallMiddle = middle.distance < MEDIUM_SEGMENT_THRESHOLD;
+                bool similarOuter = (first.type == last.type) && 
+                                    (std::abs(first.avgGradient - last.avgGradient) < SIMILAR_GRADIENT_THRESHOLD * 1.5);
+                
+                if (isSmallMiddle && similarOuter) {
+                    TrackSegment mergedSegment = first;
+                    mergedSegment.endIndex = last.endIndex;
+                    mergedSegment.distance = first.distance + middle.distance + last.distance;
+                    mergedSegment.elevationChange = first.elevationChange + middle.elevationChange + last.elevationChange;
+                    mergedSegment.maxGradient = std::max(std::max(first.maxGradient, middle.maxGradient), last.maxGradient);
+                    mergedSegment.minGradient = std::min(std::min(first.minGradient, middle.minGradient), last.minGradient);
+                    mergedSegment.avgGradient = mergedSegment.elevationChange / mergedSegment.distance * 100.0;
+                    
+                    mergedSegment.type = first.type;
+                    
+                    improvedSegments.push_back(mergedSegment);
+                    i += 2;
+                } else {
+                    improvedSegments.push_back(first);
+                }
+            } else {
+                improvedSegments.push_back(mergedSegments[i]);
+            }
+        }
+        
+        mergedSegments = improvedSegments;
+    }
+    
+    std::vector<TrackSegment> finalSegments;
+    const double MIN_SIGNIFICANT_SEGMENT = 800.0;
     
     for (auto& segment : mergedSegments) {
-        // Recalculate true average gradient
-        double elevChange = points[segment.endIndex].elevation - points[segment.startIndex].elevation;
-        double distance = points[segment.endIndex].distance - points[segment.startIndex].distance;
+        if (segment.distance < MIN_SIGNIFICANT_SEGMENT / 2) {
+            continue;
+        }
         
-        if (distance > 0) {
-            segment.avgGradient = (elevChange / distance) * 100.0;
+        double startElev = points[segment.startIndex].elevation;
+        double endElev = points[segment.endIndex].elevation;
+        double actualDistance = points[segment.endIndex].distance - points[segment.startIndex].distance;
+        
+        if (actualDistance > 0) {
+            double actualGradient = ((endElev - startElev) / actualDistance) * 100.0;
+            segment.avgGradient = actualGradient;
             
-            // Re-classify segment type based on average gradient
-            if (segment.avgGradient > GRADIENT_THRESHOLD_FLAT) {
+            if (segment.avgGradient > 1.0) {
                 segment.type = TrackSegment::CLIMB;
-            } else if (segment.avgGradient < -GRADIENT_THRESHOLD_FLAT) {
+            } else if (segment.avgGradient < -1.0) {
                 segment.type = TrackSegment::DESCENT;
             } else {
                 segment.type = TrackSegment::FLAT;
             }
         }
+        
+        finalSegments.push_back(segment);
     }
     
-    return mergedSegments;
+    if (finalSegments.size() > 1 && finalSegments.size() < 5) {
+        std::vector<TrackSegment> consolidatedSegments;
+        currentSegment = finalSegments[0];
+        
+        for (size_t i = 1; i < finalSegments.size(); i++) {
+            const TrackSegment& nextSegment = finalSegments[i];
+            
+            if (currentSegment.distance < MIN_SIGNIFICANT_SEGMENT || 
+                nextSegment.distance < MIN_SIGNIFICANT_SEGMENT) {
+                
+                currentSegment.endIndex = nextSegment.endIndex;
+                currentSegment.distance += nextSegment.distance;
+                currentSegment.elevationChange += nextSegment.elevationChange;
+                currentSegment.avgGradient = currentSegment.elevationChange / currentSegment.distance * 100.0;
+                
+                currentSegment.maxGradient = std::max(currentSegment.maxGradient, nextSegment.maxGradient);
+                currentSegment.minGradient = std::min(currentSegment.minGradient, nextSegment.minGradient);
+                
+                if (currentSegment.avgGradient > 1.0) {
+                    currentSegment.type = TrackSegment::CLIMB;
+                } else if (currentSegment.avgGradient < -1.0) {
+                    currentSegment.type = TrackSegment::DESCENT;
+                } else {
+                    currentSegment.type = TrackSegment::FLAT;
+                }
+            } else {
+                consolidatedSegments.push_back(currentSegment);
+                currentSegment = nextSegment;
+            }
+        }
+        
+        consolidatedSegments.push_back(currentSegment);
+        return consolidatedSegments;
+    }
+    
+    return finalSegments;
 }
 
 void TrackStatsWidget::updateMiniProfile(const GPXParser& parser) {
     const std::vector<TrackPoint>& points = parser.getPoints();
     
-    // Clear existing data
     m_miniProfile->graph(0)->data()->clear();
     m_miniProfile->graph(1)->data()->clear();
     
@@ -799,12 +831,10 @@ void TrackStatsWidget::updateMiniProfile(const GPXParser& parser) {
         return;
     }
     
-    // Prepare data for the plot
     QVector<double> x, y;
     x.reserve(points.size());
     y.reserve(points.size());
     
-    // Fill in data points
     for (const auto& point : points) {
         double xVal = m_useMetricUnits ? metersToKilometers(point.distance) : metersToMiles(point.distance);
         double yVal = m_useMetricUnits ? point.elevation : metersToFeet(point.elevation);
@@ -812,73 +842,61 @@ void TrackStatsWidget::updateMiniProfile(const GPXParser& parser) {
         y.append(yVal);
     }
     
-    // Set the data
     m_miniProfile->graph(0)->setData(x, y);
     
-    // Set axis ranges with better styling
     double minElev = m_useMetricUnits ? parser.getMinElevation() : metersToFeet(parser.getMinElevation());
     double maxElev = m_useMetricUnits ? parser.getMaxElevation() : metersToFeet(parser.getMaxElevation());
     double elevRange = maxElev - minElev;
     double totalDist = m_useMetricUnits ? metersToKilometers(parser.getTotalDistance()) 
                                        : metersToMiles(parser.getTotalDistance());
     
-    // Add padding to ranges for better visualization
     minElev -= elevRange * 0.08;
     maxElev += elevRange * 0.08;
     
     m_miniProfile->xAxis->setRange(0, totalDist);
     m_miniProfile->yAxis->setRange(minElev, maxElev);
     
-    // Modern styling for the mini profile
     m_miniProfile->setBackground(QColor("#f8f9fa"));
     m_miniProfile->axisRect()->setBackground(QColor("#ffffff"));
     
-    // Update coloring for segments
     if (!m_segments.empty()) {
-        // Create a second graph layer to color segments
         QCPGraph* segGraph = nullptr;
         
-        // Remove any existing segment graphs
         while (m_miniProfile->graphCount() > 2) {
             m_miniProfile->removeGraph(m_miniProfile->graphCount() - 1);
         }
         
-        // Add colored segments
         for (size_t i = 0; i < m_segments.size(); i++) {
             const TrackSegment& segment = m_segments[i];
             
-            // Create new graph for this segment
             segGraph = m_miniProfile->addGraph();
             
-            // Set color based on segment type and gradient
             QColor segColor;
             switch (segment.type) {
                 case TrackSegment::CLIMB:
                     if (segment.avgGradient > 10.0)
-                        segColor = QColor(255, 0, 0, 180);  // Steep climb - red
+                        segColor = QColor(255, 0, 0, 180);
                     else if (segment.avgGradient > 5.0)
-                        segColor = QColor(255, 165, 0, 180); // Moderate climb - orange
+                        segColor = QColor(255, 165, 0, 180);
                     else
-                        segColor = QColor(255, 255, 0, 180); // Easy climb - yellow
+                        segColor = QColor(255, 255, 0, 180);
                     break;
                 case TrackSegment::DESCENT:
                     if (segment.avgGradient < -10.0)
-                        segColor = QColor(128, 0, 128, 180); // Steep descent - purple
+                        segColor = QColor(128, 0, 128, 180);
                     else if (segment.avgGradient < -5.0)
-                        segColor = QColor(0, 0, 255, 180);   // Moderate descent - blue
+                        segColor = QColor(0, 0, 255, 180);
                     else
-                        segColor = QColor(173, 216, 230, 180); // Easy descent - light blue
+                        segColor = QColor(173, 216, 230, 180);
                     break;
                 default:
-                    segColor = QColor(0, 128, 0, 180);       // Flat - green
+                    segColor = QColor(0, 128, 0, 180);
                     break;
             }
             
-            // Set pen and brush
             segGraph->setPen(QPen(segColor.darker(120), 2));
             segGraph->setBrush(QBrush(segColor.lighter(120)));
             
-            // Extract segment data points
             QVector<double> segX, segY;
             for (size_t j = segment.startIndex; j <= segment.endIndex && j < points.size(); j++) {
                 double xVal = m_useMetricUnits ? metersToKilometers(points[j].distance) 
@@ -888,14 +906,11 @@ void TrackStatsWidget::updateMiniProfile(const GPXParser& parser) {
                 segY.append(yVal);
             }
             
-            // Set segment data
             segGraph->setData(segX, segY);
         }
         
-        // Bring marker to front
         m_miniProfile->graph(1)->setLayer("overlay");
         
-        // Add a grid line at current elevation for better readability
         if (!points.empty() && m_miniProfile->graphCount() > 1) {
             QCPGraph* gridGraph = m_miniProfile->addGraph();
             gridGraph->setPen(QPen(QColor(200, 200, 200, 70), 1, Qt::DashLine));
@@ -908,23 +923,19 @@ void TrackStatsWidget::updateMiniProfile(const GPXParser& parser) {
         }
     }
     
-    // Replot
     m_miniProfile->replot();
 }
 
 void TrackStatsWidget::updateSegmentsList() {
-    // Clear existing buttons
     QLayoutItem* child;
     while ((child = m_segmentListWidget->layout()->takeAt(0)) != nullptr) {
         delete child->widget();
         delete child;
     }
     
-    // Add a button for each segment
     for (size_t i = 0; i < m_segments.size(); i++) {
         const TrackSegment& segment = m_segments[i];
         
-        // Create a button for this segment
         QString segmentTypeText;
         QString segmentIcon;
         
@@ -956,15 +967,12 @@ void TrackStatsWidget::updateSegmentsList() {
         );
         segmentButton->setFlat(true);
         
-        // Store segment index in button's property
         segmentButton->setProperty("segmentIndex", static_cast<int>(i));
         
-        // Connect button click to show segment details
         connect(segmentButton, &QPushButton::clicked, [this, i]() {
             showSegmentDetails(i);
         });
         
-        // Add to layout
         m_segmentListWidget->layout()->addWidget(segmentButton);
     }
 }
@@ -977,7 +985,6 @@ void TrackStatsWidget::showSegmentDetails(int segmentIndex) {
     
     const TrackSegment& segment = m_segments[segmentIndex];
     
-    // Update segment details
     QString segmentType;
     switch (segment.type) {
         case TrackSegment::CLIMB:
@@ -991,58 +998,51 @@ void TrackStatsWidget::showSegmentDetails(int segmentIndex) {
             break;
     }
     
-    // Add difficulty rating
     QString difficulty = getDifficultyLabel(segment.avgGradient);
     segmentType += " - " + difficulty;
     
-    // Set details
     m_segmentDetailsTitle->setText(QString("Segment %1").arg(segmentIndex + 1));
     m_segmentTypeLabel->setText(segmentType);
     m_segmentDistanceLabel->setText(formatDistance(segment.distance));
     m_segmentElevationLabel->setText(formatElevation(segment.elevationChange));
     
-    // Set gradient with color coding
     m_segmentGradientLabel->setText(formatGradient(segment.avgGradient));
     m_segmentGradientLabel->setStyleSheet(getGradientColorStyle(segment.avgGradient));
     
-    // Modern styling for the details widget
     m_segmentDetailsWidget->setStyleSheet(
         "background-color: #f8f9fa; border-radius: 6px; border: 1px solid #e0e0e0;"
     );
     
-    // Show the details widget with a subtle animation
     m_segmentDetailsWidget->setVisible(true);
 }
 
 QString TrackStatsWidget::getGradientColorStyle(double gradient) const {
     QString color;
     
-    // Color based on gradient severity
     if (gradient > 15.0) {
-        color = "#d32f2f"; // Very steep climb - dark red
+        color = "#d32f2f";
     } else if (gradient > 10.0) {
-        color = "#f44336"; // Steep climb - red
+        color = "#f44336";
     } else if (gradient > 5.0) {
-        color = "#ff9800"; // Moderate climb - orange
+        color = "#ff9800";
     } else if (gradient > 2.0) {
-        color = "#ffc107"; // Easy climb - amber
+        color = "#ffc107";
     } else if (gradient < -15.0) {
-        color = "#9c27b0"; // Very steep descent - purple
+        color = "#9c27b0";
     } else if (gradient < -10.0) {
-        color = "#673ab7"; // Steep descent - deep purple
+        color = "#673ab7";
     } else if (gradient < -5.0) {
-        color = "#3f51b5"; // Moderate descent - indigo
+        color = "#3f51b5";
     } else if (gradient < -2.0) {
-        color = "#2196f3"; // Easy descent - blue
+        color = "#2196f3";
     } else {
-        color = "#4caf50"; // Flat - green
+        color = "#4caf50";
     }
     
     return QString("color: %1; font-weight: bold;").arg(color);
 }
 
 QString TrackStatsWidget::getDifficultyLabel(double gradient) const {
-    // Return difficulty label based on gradient
     double absGradient = std::abs(gradient);
     
     if (absGradient > 15.0) {
