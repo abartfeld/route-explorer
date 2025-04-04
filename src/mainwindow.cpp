@@ -22,9 +22,14 @@
 
 MainWindow::MainWindow(QWidget *parent) 
     : QMainWindow(parent),
-      m_currentPointIndex(0)
+      m_currentPointIndex(0),
+      m_updatingFromHover(false),
+      m_updatingFrom3D(false)
 {
     setupUi();
+    
+    // Show landing page by default on startup
+    showLandingPage();
 }
 
 MainWindow::~MainWindow()
@@ -92,18 +97,42 @@ void MainWindow::setupUi() {
     )";
     qApp->setStyleSheet(materialStyle);
     
-    // Set up the main window with material design look
-    resize(1024, 768);
-    setWindowTitle("GPX Viewer");
-    setWindowIcon(QIcon(":/icons/map-marker.svg"));
-    setUnifiedTitleAndToolBarOnMac(true);
+    // Create stacked widget to switch between landing page and main view
+    m_mainStack = new QStackedWidget(this);
+    setCentralWidget(m_mainStack);
     
-    // Create the central widget with vertical layout
-    QWidget *centralWidget = new QWidget(this);
-    setCentralWidget(centralWidget);
-    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
+    // Create landing page
+    m_landingPage = new LandingPage(this);
+    m_mainStack->addWidget(m_landingPage);
+    
+    // Connect landing page signals
+    connect(m_landingPage, &LandingPage::openFile, this, 
+            QOverload<const QString&>::of(&MainWindow::openFile));
+    connect(m_landingPage, &LandingPage::browse, this, 
+            QOverload<>::of(&MainWindow::openFile));
+    connect(m_landingPage, &LandingPage::createNewRoute, this, &MainWindow::createNewRoute);
+    
+    // Create main view
+    m_mainView = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(m_mainView);
     mainLayout->setContentsMargins(12, 12, 12, 12);
     mainLayout->setSpacing(12);
+    
+    // Create a tab widget to hold map and 3D views
+    m_tabWidget = new QTabWidget(this);
+    m_tabWidget->setDocumentMode(true);
+    m_tabWidget->setTabPosition(QTabWidget::North);
+    m_tabWidget->setStyleSheet(
+        "QTabWidget::pane { background-color: #f5f5f5; }"
+        "QTabBar::tab { padding: 8px 12px; background-color: #e0e0e0; margin-right: 2px; }"
+        "QTabBar::tab:selected { background-color: #f5f5f5; border-bottom: 2px solid #2196F3; }"
+        "QTabBar::tab:hover { background-color: #e8e8e8; }"
+    );
+    
+    // Create the 2D map tab
+    QWidget* mapTab = new QWidget();
+    QVBoxLayout* mapLayout = new QVBoxLayout(mapTab);
+    mapLayout->setContentsMargins(0, 0, 0, 0);
     
     // Upper panel with map and stats side by side
     QWidget *upperPanel = new QWidget();
@@ -117,9 +146,9 @@ void MainWindow::setupUi() {
     QFrame *mapFrame = new QFrame();
     mapFrame->setFrameShape(QFrame::StyledPanel);
     mapFrame->setFrameShadow(QFrame::Plain);
-    QVBoxLayout *mapLayout = new QVBoxLayout(mapFrame);
-    mapLayout->setContentsMargins(0, 0, 0, 0);
-    mapLayout->addWidget(m_mapView);
+    QVBoxLayout *mapLayoutInner = new QVBoxLayout(mapFrame);
+    mapLayoutInner->setContentsMargins(0, 0, 0, 0);
+    mapLayoutInner->addWidget(m_mapView);
     upperLayout->addWidget(mapFrame, 1); // Map gets stretch priority
     
     // Create the stats widget
@@ -127,14 +156,14 @@ void MainWindow::setupUi() {
     upperLayout->addWidget(m_statsWidget, 0); // No stretch - fixed width
     
     // Add the upper panel to main layout
-    mainLayout->addWidget(upperPanel, 7); // Upper panel gets 7/10 of vertical space
+    mapLayout->addWidget(upperPanel, 7); // Upper panel gets 7/10 of vertical space
     
     // Create the bottom panel containing the elevation profile
     QWidget *bottomPanel = new QWidget();
     QVBoxLayout *bottomLayout = new QVBoxLayout(bottomPanel);
     bottomLayout->setContentsMargins(0, 0, 0, 0);
     bottomLayout->setSpacing(8);
-    mainLayout->addWidget(bottomPanel, 3); // Elevation gets 3/10 of vertical space
+    mapLayout->addWidget(bottomPanel, 3); // Elevation gets 3/10 of vertical space
     
     // Create the elevation profile plot with themed colors
     m_elevationPlot = new QCustomPlot();
@@ -217,7 +246,13 @@ void MainWindow::setupUi() {
     // Add actions
     QAction *openAction = toolBar->addAction(QIcon(":/icons/open-file.svg"), "Open GPX File");
     openAction->setShortcut(QKeySequence::Open);
-    connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
+    connect(openAction, &QAction::triggered, this, [this]() {
+        openFile();  // Call the no-parameter version explicitly
+    });
+    
+    // Add home button to toolbar
+    QAction *homeAction = toolBar->addAction(QIcon(":/icons/home.svg"), "Home");
+    connect(homeAction, &QAction::triggered, this, &MainWindow::showLandingPage);
     
     toolBar->addSeparator();
     
@@ -258,6 +293,39 @@ void MainWindow::setupUi() {
     
     // Set up position slider
     connect(m_positionSlider, &QSlider::valueChanged, this, &MainWindow::updatePosition);
+    
+    // Add connection for route hover events
+    connect(m_mapView, &MapWidget::routeHovered, this, &MainWindow::handleRouteHover);
+    
+    // Create the 3D elevation view tab
+    m_elevation3DView = new ElevationView3D();
+    
+    // Add tabs
+    m_tabWidget->addTab(mapTab, "Map View");
+    m_tabWidget->addTab(m_elevation3DView, "3D Elevation");
+    
+    // Set the tab widget as the central widget
+    setCentralWidget(m_tabWidget);
+    
+    // Connect 3D view signals
+    connect(m_elevation3DView, &ElevationView3D::positionChanged, 
+            this, &MainWindow::handleFlythrough3DPositionChanged);
+    
+    // Add tab switching action to toolbar
+    QAction* switchToMapAction = toolBar->addAction("Map View");
+    connect(switchToMapAction, &QAction::triggered, [this](){ switchToTab(0); });
+    
+    QAction* switchTo3DAction = toolBar->addAction("3D View");
+    connect(switchTo3DAction, &QAction::triggered, [this](){ switchToTab(1); });
+    
+    // Add main view to stack
+    m_mainStack->addWidget(m_mainView);
+}
+
+void MainWindow::switchToTab(int tabIndex) {
+    if (tabIndex >= 0 && tabIndex < m_tabWidget->count()) {
+        m_tabWidget->setCurrentIndex(tabIndex);
+    }
 }
 
 void MainWindow::openFile() {
@@ -269,13 +337,24 @@ void MainWindow::openFile() {
         return;
     }
     
-    if (m_gpxParser.parse(filename)) {
+    openFile(filename);
+}
+
+void MainWindow::openFile(const QString& filePath) {
+    qDebug() << "MainWindow::openFile - Opening file:" << filePath;
+    
+    if (m_gpxParser.parse(filePath)) {
         const std::vector<TrackPoint>& points = m_gpxParser.getPoints();
         
         if (points.empty()) {
             statusBar()->showMessage("No track points found in GPX file", 3000);
             return;
         }
+        
+        qDebug() << "MainWindow::openFile - Successfully parsed" << points.size() << "points";
+        
+        // Show the main view
+        showMainView();
         
         // Create route on map
         std::vector<QGeoCoordinate> coordinates;
@@ -291,14 +370,20 @@ void MainWindow::openFile() {
         // Get segments from stats widget
         const std::vector<TrackSegment>& segments = m_statsWidget->getSegments();
         
+        // Provide track points to the map for hover information
+        m_mapView->setTrackPoints(points);
+        
         // Use segmented route if available
         if (!segments.empty()) {
+            qDebug() << "MainWindow::openFile - Setting route with" << segments.size() << "segments";
             m_mapView->setRouteWithSegments(coordinates, segments, points);
         } else {
+            qDebug() << "MainWindow::openFile - Setting route without segments";
             m_mapView->setRoute(coordinates);
         }
         
         // Plot elevation profile
+        qDebug() << "MainWindow::openFile - Plotting elevation profile";
         plotElevationProfile();
         
         // Set up position slider
@@ -310,10 +395,66 @@ void MainWindow::openFile() {
         m_currentPointIndex = 0;
         updatePosition(0);
         
-        statusBar()->showMessage(QString("Loaded %1 with %2 points").arg(QFileInfo(filename).fileName()).arg(points.size()), 3000);
+        // Update 3D view
+        try {
+            qDebug() << "MainWindow::openFile - Updating 3D view with" << points.size() << "points";
+            if (m_elevation3DView) {
+                m_elevation3DView->setTrackData(points);
+            } else {
+                qWarning() << "MainWindow::openFile - 3D view is null";
+            }
+        } catch (const std::exception& e) {
+            qCritical() << "MainWindow::openFile - Exception in 3D view update:" << e.what();
+        } catch (...) {
+            qCritical() << "MainWindow::openFile - Unknown exception in 3D view update";
+        }
+        
+        // Add to recent files
+        addToRecentFiles(filePath);
+        
+        // Show the main view
+        showMainView();
+        
+        statusBar()->showMessage(QString("Loaded %1 with %2 points").arg(QFileInfo(filePath).fileName()).arg(points.size()), 3000);
     } else {
         statusBar()->showMessage("Failed to load GPX file", 3000);
     }
+}
+
+void MainWindow::addToRecentFiles(const QString& filePath) {
+    QSettings settings;
+    QStringList recentFiles = settings.value("recentFiles").toStringList();
+    
+    // Remove if already exists
+    recentFiles.removeAll(filePath);
+    
+    // Add to beginning of the list
+    recentFiles.prepend(filePath);
+    
+    // Keep only MAX_RECENT_FILES
+    while (recentFiles.size() > 10) {
+        recentFiles.removeLast();
+    }
+    
+    settings.setValue("recentFiles", recentFiles);
+    
+    // Update landing page if it exists
+    if (m_landingPage) {
+        m_landingPage->updateRecentFiles();
+    }
+}
+
+void MainWindow::showLandingPage() {
+    m_mainStack->setCurrentWidget(m_landingPage);
+}
+
+void MainWindow::showMainView() {
+    m_mainStack->setCurrentWidget(m_mainView);
+}
+
+void MainWindow::createNewRoute() {
+    QMessageBox::information(this, "Create New Route", 
+                           "This feature is coming soon! You'll be able to create new routes by placing points on the map.");
 }
 
 void MainWindow::plotElevationProfile() {
@@ -395,6 +536,11 @@ void MainWindow::plotElevationProfile() {
 }
 
 void MainWindow::updatePosition(int value) {
+    // If this update is coming from a hover event, skip to avoid feedback
+    if (m_updatingFromHover) {
+        return;
+    }
+    
     // Convert slider position (0-1000) to percentage of total distance
     double percentage = value / 1000.0;
     
@@ -423,6 +569,11 @@ void MainWindow::updatePosition(int value) {
         
         // Update statistics display via the stats widget
         m_statsWidget->updatePosition(point, m_currentPointIndex, m_gpxParser);
+    }
+    
+    // Update 3D view position if not coming from 3D view
+    if (!m_updatingFrom3D) {
+        m_elevation3DView->updatePosition(m_currentPointIndex);
     }
 }
 
@@ -479,4 +630,78 @@ size_t MainWindow::findClosestPointByDistance(double targetDistance) {
     double highDiff = std::abs(points[high].distance - targetDistance);
     
     return (lowDiff < highDiff) ? low : high;
+}
+
+// New slot to handle hover events over the route on the map
+void MainWindow::handleRouteHover(int pointIndex) {
+    if (pointIndex < 0 || pointIndex >= static_cast<int>(m_gpxParser.getPoints().size())) {
+        return;
+    }
+    
+    // Prevent loop when slider position changes trigger hover events
+    if (m_updatingFromHover) {
+        return;
+    }
+    
+    m_updatingFromHover = true;
+    
+    // Calculate the slider position based on point index
+    // Convert from point index (0 to N) to slider range (0 to 1000)
+    int totalPoints = m_gpxParser.getPoints().size();
+    int sliderPos = pointIndex * 1000 / (totalPoints - 1);
+    
+    // Set the position slider without triggering its valueChanged signal
+    m_positionSlider->blockSignals(true);
+    m_positionSlider->setValue(sliderPos);
+    m_positionSlider->blockSignals(false);
+    
+    // Update the current position
+    m_currentPointIndex = pointIndex;
+    
+    // Update the marker on the map and in the plot
+    const TrackPoint& point = m_gpxParser.getPoints()[pointIndex];
+    m_mapView->updateMarker(point.coord);
+    updatePlotPosition(point);
+    
+    // Update statistics display
+    m_statsWidget->updatePosition(point, pointIndex, m_gpxParser);
+    
+    // Update 3D view position
+    m_elevation3DView->updatePosition(pointIndex);
+    
+    m_updatingFromHover = false;
+}
+
+void MainWindow::handleFlythrough3DPositionChanged(int pointIndex) {
+    qDebug() << "MainWindow::handleFlythrough3DPositionChanged - Position changed to" << pointIndex;
+    
+    if (pointIndex < 0 || pointIndex >= static_cast<int>(m_gpxParser.getPoints().size())) {
+        qWarning() << "MainWindow::handleFlythrough3DPositionChanged - Invalid point index";
+        return;
+    }
+    
+    // Set flag to prevent feedback loops
+    m_updatingFrom3D = true;
+    
+    // Calculate the slider position based on point index
+    int totalPoints = m_gpxParser.getPoints().size();
+    int sliderPos = pointIndex * 1000 / (totalPoints - 1);
+    
+    // Set the position slider
+    m_positionSlider->blockSignals(true);
+    m_positionSlider->setValue(sliderPos);
+    m_positionSlider->blockSignals(false);
+    
+    // Update the current position
+    m_currentPointIndex = pointIndex;
+    
+    // Update the marker on the map and in the plot
+    const TrackPoint& point = m_gpxParser.getPoints()[pointIndex];
+    m_mapView->updateMarker(point.coord);
+    updatePlotPosition(point);
+    
+    // Update statistics display
+    m_statsWidget->updatePosition(point, pointIndex, m_gpxParser);
+    
+    m_updatingFrom3D = false;
 }

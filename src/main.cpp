@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "debug_helper.h"
 #include <QApplication>
 #include <QFile>
 #include <QDir>
@@ -34,12 +35,18 @@ void initializeApp() {
 
 int main(int argc, char *argv[])
 {
+    // Install signal handlers for better crash debug info
+    DebugHelper::installSignalHandlers();
+    
     QApplication app(argc, argv);
     
     // Set application metadata
     QCoreApplication::setOrganizationName("RouteExplorer");
     QCoreApplication::setApplicationName("GPX Viewer");
     QCoreApplication::setApplicationVersion("1.0");
+    
+    // Increase debug verbosity
+    qSetMessagePattern("[%{time hh:mm:ss.zzz}] %{type}: %{message} (%{file}:%{line})");
     
     // Initialize application directories and settings
     initializeApp();

@@ -466,72 +466,72 @@ void TrackStatsWidget::analyzeSegments(const GPXParser& parser) {
 }
 
 std::vector<double> TrackStatsWidget::calculateSmoothedGradients(const std::vector<TrackPoint>& points) {
-    const int WINDOW_SIZE = 15;
+    const int WINDOW_SIZE = 15; 
     
-    std::vector<double> rawGradients(points.size(), 0.0);
-    for (size_t i = 1; i < points.size(); i++) {
-        double distDiff = points[i].distance - points[i-1].distance;
-        double elevDiff = points[i].elevation - points[i-1].elevation;
-        if (distDiff > 0) {
-            rawGradients[i] = (elevDiff / distDiff) * 100.0;
-        }
+    // Use the pre-calculated gradients from GPXParser as a starting point
+    std::vector<double> gradients(points.size());
+    for (size_t i = 0; i < points.size(); i++) {
+        gradients[i] = points[i].gradient;
     }
     
-    std::vector<double> smoothGradients(points.size(), 0.0);
-    int halfWindow = WINDOW_SIZE / 2;
+    // Apply segment-aware smoothing to avoid blurring segment boundaries
+    std::vector<double> smoothedGradients = gradients;
     
+    // Define a Gaussian-like kernel for smoothing
+    int halfWindow = WINDOW_SIZE / 2;
+    std::vector<double> kernel(WINDOW_SIZE);
+    double kernelSum = 0.0;
+    
+    for (int i = 0; i < WINDOW_SIZE; i++) {
+        double x = (i - halfWindow) / (halfWindow / 2.0);
+        kernel[i] = exp(-0.5 * x * x);
+        kernelSum += kernel[i];
+    }
+    
+    // Normalize kernel
+    for (int i = 0; i < WINDOW_SIZE; i++) {
+        kernel[i] /= kernelSum;
+    }
+    
+    // Apply the kernel to smooth gradients
     for (size_t i = 0; i < points.size(); i++) {
         double sum = 0.0;
-        double totalWeight = 0.0;
+        double weightSum = 0.0;
         
         for (int j = -halfWindow; j <= halfWindow; j++) {
-            int signedIdx = static_cast<int>(i) + j;
-            if (signedIdx >= 0 && signedIdx < static_cast<int>(points.size())) {
-                size_t idx = static_cast<size_t>(signedIdx);
-                double weight = exp(-0.5 * pow(j / (halfWindow / 2.0), 2));
-                sum += rawGradients[idx] * weight;
-                totalWeight += weight;
+            int idx = static_cast<int>(i) + j;
+            
+            if (idx >= 0 && idx < static_cast<int>(points.size())) {
+                // If points are close in distance, apply the kernel weight
+                if (j == 0 || 
+                    (idx > 0 && points[idx].distance - points[idx-1].distance < 100.0)) {
+                    double weight = kernel[j + halfWindow];
+                    sum += gradients[idx] * weight;
+                    weightSum += weight;
+                }
             }
         }
         
-        smoothGradients[i] = (totalWeight > 0) ? (sum / totalWeight) : 0.0;
+        smoothedGradients[i] = (weightSum > 0) ? (sum / weightSum) : gradients[i];
     }
     
-    std::vector<double> doubleSmoothedGradients = smoothGradients;
-    
-    for (size_t i = 0; i < points.size(); i++) {
-        double sum = 0.0;
-        double totalWeight = 0.0;
-        
-        for (int j = -halfWindow/2; j <= halfWindow/2; j++) {
-            int signedIdx = static_cast<int>(i) + j;
-            if (signedIdx >= 0 && signedIdx < static_cast<int>(points.size())) {
-                size_t idx = static_cast<size_t>(signedIdx);
-                double weight = exp(-0.5 * pow(j / (halfWindow / 4.0), 2));
-                sum += smoothGradients[idx] * weight;
-                totalWeight += weight;
-            }
-        }
-        
-        doubleSmoothedGradients[i] = (totalWeight > 0) ? (sum / totalWeight) : 0.0;
-    }
-    
-    return doubleSmoothedGradients;
+    return smoothedGradients;
 }
 
 std::vector<size_t> TrackStatsWidget::identifySegmentBoundaries(
     const std::vector<TrackPoint>& points, 
-    const std::vector<double>& smoothGradients)
+    const std::vector<double>& smoothGradients) 
 {
-    const double GRADIENT_THRESHOLD_FLAT = 1.0;
-    const double SEGMENT_CHANGE_THRESHOLD = 3.0;
-    const double MIN_SEGMENT_DISTANCE = 800.0;
+    const double GRADIENT_THRESHOLD_FLAT = 1.5; // Slightly increased for better sensitivity
+    const double SEGMENT_CHANGE_THRESHOLD = 2.5; // Slightly decreased for more sensitive detection
+    const double MIN_SEGMENT_DISTANCE = 300.0; // Shorter minimum segment length for better detail
     
     std::vector<size_t> boundaries;
     boundaries.push_back(0);
     
     enum class GradientType { FLAT, CLIMB, DESCENT };
     
+    // Determine initial segment type
     GradientType currentType = GradientType::FLAT;
     if (points.size() > 1) {
         if (smoothGradients[1] > GRADIENT_THRESHOLD_FLAT) {
@@ -541,57 +541,77 @@ std::vector<size_t> TrackStatsWidget::identifySegmentBoundaries(
         }
     }
     
-    const int STABILITY_WINDOW = 9;
-    std::vector<GradientType> recentTypes(STABILITY_WINDOW, currentType);
+    // Use a more sophisticated approach for detecting changes
+    const int STABILITY_WINDOW = 7; // Smaller window for quicker response
+    std::deque<GradientType> recentTypes(STABILITY_WINDOW, currentType);
     
     for (size_t i = 1; i < points.size(); i++) {
-        GradientType pointType = GradientType::FLAT;
+        // Determine point type from smoothed gradient
+        GradientType pointType;
         if (smoothGradients[i] > GRADIENT_THRESHOLD_FLAT) {
             pointType = GradientType::CLIMB;
         } else if (smoothGradients[i] < -GRADIENT_THRESHOLD_FLAT) {
             pointType = GradientType::DESCENT;
+        } else {
+            pointType = GradientType::FLAT;
         }
         
-        for (int j = 0; j < STABILITY_WINDOW - 1; j++) {
-            recentTypes[j] = recentTypes[j + 1];
-        }
-        recentTypes[STABILITY_WINDOW - 1] = pointType;
+        // Update recent types
+        recentTypes.pop_front();
+        recentTypes.push_back(pointType);
         
-        bool typeChange = false;
-        if (pointType != currentType) {
-            int newTypeCount = 0;
-            for (const auto& type : recentTypes) {
-                if (type == pointType) newTypeCount++;
+        // Check if there's a stable type change
+        std::map<GradientType, int> typeCounts;
+        for (const auto& type : recentTypes) {
+            typeCounts[type]++;
+        }
+        
+        // Find the dominant type in the window
+        GradientType dominantType = currentType;
+        int maxCount = 0;
+        
+        // Use a different approach instead of C++17 structured bindings
+        for (auto typeCountPair : typeCounts) {
+            GradientType type = typeCountPair.first;
+            int count = typeCountPair.second;
+            if (count > maxCount) {
+                maxCount = count;
+                dominantType = type;
             }
-            
-            if (newTypeCount > STABILITY_WINDOW * 3/4) {
-                typeChange = true;
-            }
         }
         
-        if (typeChange && (i > 0) && 
+        // If the dominant type is different and stable (above threshold), register a change
+        if (dominantType != currentType && 
+            typeCounts[dominantType] >= (STABILITY_WINDOW * 2 / 3) && 
+            (i > 0) && 
             (points[i].distance - points[boundaries.back()].distance >= MIN_SEGMENT_DISTANCE)) {
             
+            // Calculate average gradients for current and new segment
             double avgCurrentGradient = 0.0;
             double avgNewGradient = 0.0;
             
+            // Sample current segment
             for (size_t j = boundaries.back(); j < i; j++) {
                 avgCurrentGradient += smoothGradients[j];
             }
             avgCurrentGradient /= (i - boundaries.back());
             
-            for (size_t j = i; j < std::min(i + STABILITY_WINDOW, points.size()); j++) {
+            // Sample potential new segment
+            size_t sampleEnd = std::min(i + STABILITY_WINDOW, points.size());
+            for (size_t j = i; j < sampleEnd; j++) {
                 avgNewGradient += smoothGradients[j];
             }
-            avgNewGradient /= std::min(STABILITY_WINDOW, static_cast<int>(points.size() - i));
+            avgNewGradient /= (sampleEnd - i);
             
+            // Only create a new segment if the gradient change is significant
             if (std::abs(avgNewGradient - avgCurrentGradient) >= SEGMENT_CHANGE_THRESHOLD) {
                 boundaries.push_back(i);
-                currentType = pointType;
+                currentType = dominantType;
             }
         }
     }
     
+    // Always include the last point
     if (boundaries.back() != points.size() - 1) {
         boundaries.push_back(points.size() - 1);
     }
@@ -662,9 +682,9 @@ std::vector<TrackSegment> TrackStatsWidget::optimizeSegments(
 {
     if (rawSegments.empty()) return rawSegments;
     
-    const double SIMILAR_GRADIENT_THRESHOLD = 4.0;
-    const double TINY_SEGMENT_THRESHOLD = 600.0;
-    const double MEDIUM_SEGMENT_THRESHOLD = 1000.0;
+    const double SIMILAR_GRADIENT_THRESHOLD = 3.0; // Slightly decreased for more precise segmentation
+    const double TINY_SEGMENT_THRESHOLD = 300.0; // Shorter to allow more detailed segments
+    const double SMALL_SEGMENT_THRESHOLD = 500.0;
     
     std::vector<TrackSegment> mergedSegments;
     TrackSegment currentSegment = rawSegments[0];
@@ -673,6 +693,7 @@ std::vector<TrackSegment> TrackStatsWidget::optimizeSegments(
         const TrackSegment& nextSegment = rawSegments[i];
         bool shouldMerge = false;
         
+        // Check if segments are of the same type and similar gradient
         if (nextSegment.type == currentSegment.type) {
             double gradientDiff = std::abs(nextSegment.avgGradient - currentSegment.avgGradient);
             if (gradientDiff < SIMILAR_GRADIENT_THRESHOLD) {
@@ -680,30 +701,45 @@ std::vector<TrackSegment> TrackStatsWidget::optimizeSegments(
             }
         }
         
+        // Merge tiny segments with larger ones to avoid fragmentation
         if (!shouldMerge && nextSegment.distance < TINY_SEGMENT_THRESHOLD) {
             shouldMerge = true;
         }
         
+        // Merge small segments with much larger next segments
         if (!shouldMerge && 
-            currentSegment.distance < MEDIUM_SEGMENT_THRESHOLD &&
+            currentSegment.distance < SMALL_SEGMENT_THRESHOLD &&
             nextSegment.distance > currentSegment.distance * 2) {
             shouldMerge = true;
         }
         
         if (shouldMerge) {
+            // Special handling for flat-to-flat transitions to preserve important features
+            if (currentSegment.type == TrackSegment::FLAT && nextSegment.type == TrackSegment::FLAT &&
+                std::abs(currentSegment.avgGradient - nextSegment.avgGradient) > 1.0) {
+                // Don't merge significantly different flat segments
+                mergedSegments.push_back(currentSegment);
+                currentSegment = nextSegment;
+                continue;
+            }
+            
+            // Update current segment by merging with next segment
             currentSegment.endIndex = nextSegment.endIndex;
             currentSegment.distance += nextSegment.distance;
             currentSegment.elevationChange += nextSegment.elevationChange;
             
+            // Recalculate gradient stats
             currentSegment.maxGradient = std::max(currentSegment.maxGradient, nextSegment.maxGradient);
             currentSegment.minGradient = std::min(currentSegment.minGradient, nextSegment.minGradient);
             
+            // Get more accurate average gradient using start and end points
             currentSegment.avgGradient = currentSegment.elevationChange / currentSegment.distance * 100.0;
             
+            // Re-evaluate segment type based on merged gradient
             if (nextSegment.type != currentSegment.type) {
-                if (currentSegment.avgGradient > 1.0) {
+                if (currentSegment.avgGradient > 1.5) {
                     currentSegment.type = TrackSegment::CLIMB;
-                } else if (currentSegment.avgGradient < -1.0) {
+                } else if (currentSegment.avgGradient < -1.5) {
                     currentSegment.type = TrackSegment::DESCENT;
                 } else {
                     currentSegment.type = TrackSegment::FLAT;
@@ -715,53 +751,12 @@ std::vector<TrackSegment> TrackStatsWidget::optimizeSegments(
         }
     }
     
+    // Add the last segment
     mergedSegments.push_back(currentSegment);
     
-    if (mergedSegments.size() >= 3) {
-        std::vector<TrackSegment> improvedSegments;
-        
-        for (size_t i = 0; i < mergedSegments.size(); i++) {
-            if (i + 2 < mergedSegments.size()) {
-                TrackSegment& first = mergedSegments[i];
-                TrackSegment& middle = mergedSegments[i + 1];
-                TrackSegment& last = mergedSegments[i + 2];
-                
-                bool isSmallMiddle = middle.distance < MEDIUM_SEGMENT_THRESHOLD;
-                bool similarOuter = (first.type == last.type) && 
-                                    (std::abs(first.avgGradient - last.avgGradient) < SIMILAR_GRADIENT_THRESHOLD * 1.5);
-                
-                if (isSmallMiddle && similarOuter) {
-                    TrackSegment mergedSegment = first;
-                    mergedSegment.endIndex = last.endIndex;
-                    mergedSegment.distance = first.distance + middle.distance + last.distance;
-                    mergedSegment.elevationChange = first.elevationChange + middle.elevationChange + last.elevationChange;
-                    mergedSegment.maxGradient = std::max(std::max(first.maxGradient, middle.maxGradient), last.maxGradient);
-                    mergedSegment.minGradient = std::min(std::min(first.minGradient, middle.minGradient), last.minGradient);
-                    mergedSegment.avgGradient = mergedSegment.elevationChange / mergedSegment.distance * 100.0;
-                    
-                    mergedSegment.type = first.type;
-                    
-                    improvedSegments.push_back(mergedSegment);
-                    i += 2;
-                } else {
-                    improvedSegments.push_back(first);
-                }
-            } else {
-                improvedSegments.push_back(mergedSegments[i]);
-            }
-        }
-        
-        mergedSegments = improvedSegments;
-    }
-    
-    std::vector<TrackSegment> finalSegments;
-    const double MIN_SIGNIFICANT_SEGMENT = 800.0;
-    
+    // Final pass: consistent segment type calculation
     for (auto& segment : mergedSegments) {
-        if (segment.distance < MIN_SIGNIFICANT_SEGMENT / 2) {
-            continue;
-        }
-        
+        // Calculate actual start-to-end gradient for better accuracy
         double startElev = points[segment.startIndex].elevation;
         double endElev = points[segment.endIndex].elevation;
         double actualDistance = points[segment.endIndex].distance - points[segment.startIndex].distance;
@@ -770,54 +765,18 @@ std::vector<TrackSegment> TrackStatsWidget::optimizeSegments(
             double actualGradient = ((endElev - startElev) / actualDistance) * 100.0;
             segment.avgGradient = actualGradient;
             
-            if (segment.avgGradient > 1.0) {
+            // Recalculate segment type based on the more accurate gradient
+            if (segment.avgGradient > 1.5) {
                 segment.type = TrackSegment::CLIMB;
-            } else if (segment.avgGradient < -1.0) {
+            } else if (segment.avgGradient < -1.5) {
                 segment.type = TrackSegment::DESCENT;
             } else {
                 segment.type = TrackSegment::FLAT;
             }
         }
-        
-        finalSegments.push_back(segment);
     }
     
-    if (finalSegments.size() > 1 && finalSegments.size() < 5) {
-        std::vector<TrackSegment> consolidatedSegments;
-        currentSegment = finalSegments[0];
-        
-        for (size_t i = 1; i < finalSegments.size(); i++) {
-            const TrackSegment& nextSegment = finalSegments[i];
-            
-            if (currentSegment.distance < MIN_SIGNIFICANT_SEGMENT || 
-                nextSegment.distance < MIN_SIGNIFICANT_SEGMENT) {
-                
-                currentSegment.endIndex = nextSegment.endIndex;
-                currentSegment.distance += nextSegment.distance;
-                currentSegment.elevationChange += nextSegment.elevationChange;
-                currentSegment.avgGradient = currentSegment.elevationChange / currentSegment.distance * 100.0;
-                
-                currentSegment.maxGradient = std::max(currentSegment.maxGradient, nextSegment.maxGradient);
-                currentSegment.minGradient = std::min(currentSegment.minGradient, nextSegment.minGradient);
-                
-                if (currentSegment.avgGradient > 1.0) {
-                    currentSegment.type = TrackSegment::CLIMB;
-                } else if (currentSegment.avgGradient < -1.0) {
-                    currentSegment.type = TrackSegment::DESCENT;
-                } else {
-                    currentSegment.type = TrackSegment::FLAT;
-                }
-            } else {
-                consolidatedSegments.push_back(currentSegment);
-                currentSegment = nextSegment;
-            }
-        }
-        
-        consolidatedSegments.push_back(currentSegment);
-        return consolidatedSegments;
-    }
-    
-    return finalSegments;
+    return mergedSegments;
 }
 
 void TrackStatsWidget::updateMiniProfile(const GPXParser& parser) {

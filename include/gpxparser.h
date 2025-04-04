@@ -13,6 +13,7 @@ struct TrackPoint {
     QGeoCoordinate coord;     ///< Geographical coordinates (lat/lon)
     double elevation = 0.0;   ///< Elevation in meters
     double distance = 0.0;    ///< Cumulative distance in meters from start
+    double gradient = 0.0;    ///< Gradient (slope) in percent at this point
     QDateTime timestamp;      ///< Timestamp of the track point
     
     // Default constructor
@@ -20,7 +21,7 @@ struct TrackPoint {
     
     // Constructor with all fields
     TrackPoint(const QGeoCoordinate& c, double elev, double dist, const QDateTime& time = QDateTime()) :
-        coord(c), elevation(elev), distance(dist), timestamp(time) {}
+        coord(c), elevation(elev), distance(dist), gradient(0.0), timestamp(time) {}
 };
 
 /**
@@ -115,4 +116,10 @@ private:
      * @brief Calculate distances between consecutive points
      */
     void calculateDistances();
+
+    /**
+     * @brief Calculate gradients for all track points
+     * Makes point-by-point gradient values more consistent
+     */
+    void calculateGradients();
 };

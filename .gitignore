@@ -83,3 +83,43 @@ qrc_*.cpp
 
 # Specific to this project
 maptiles/
+
+# Build directory
+build/
+
+# Qt Creator specific files
+*.user
+*.user.*
+
+# Generated files
+moc_*
+ui_*
+qrc_*
+Makefile*
+*.o
+*.obj
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+gpx_viewer
+
+# Debug and Release directories
+debug/
+release/
+
+# CMake build directories
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Visual Studio Code
+.vscode/
+
+# Downloaded font files - allow these to be committed
+# resources/fonts/
+
+# Cache directories
+.cache/

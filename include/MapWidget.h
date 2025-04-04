@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QDir>
 #include <vector>
+#include <QToolTip>
 #include "TrackStatsWidget.h" // Include to use TrackSegment
 
 /**
@@ -31,6 +32,13 @@ public:
     void setRouteWithSegments(const std::vector<QGeoCoordinate>& coordinates, 
                              const std::vector<TrackSegment>& segments,
                              const std::vector<TrackPoint>& points);
+                             
+    // Get the raw track points for hover information
+    void setTrackPoints(const std::vector<TrackPoint>& points);
+    
+signals:
+    // Signal to notify about hover position change
+    void routeHovered(int pointIndex);
     
 protected:
     // Event handlers
@@ -50,6 +58,12 @@ private:
     // Route and marker
     QList<QGeoCoordinate> mRouteCoordinates;
     QGeoCoordinate mCurrentMarkerCoordinate;
+    std::vector<TrackPoint> mTrackPoints;
+    
+    // Hover detection
+    int mHoverPointIndex;
+    QPoint mHoverPoint;
+    bool mShowTooltip;
     
     // Segments for colored route display
     struct RouteSegment {
@@ -68,5 +82,9 @@ private:
     QPoint geoToPixel(const QGeoCoordinate& coord, const QGeoCoordinate& center, int zoom, const QSize& size);
     QGeoCoordinate pixelToGeo(const QPoint& pixel, const QGeoCoordinate& center, int zoom, const QSize& size);
     QColor getSegmentColor(const TrackSegment& segment) const;
-    QColor enhanceColor(const QColor& color) const; // New helper method to improve color visibility
+    QColor enhanceColor(const QColor& color) const; // Helper method to improve color visibility
+    
+    // Route hover detection
+    int findClosestRoutePoint(const QPoint& mousePos);
+    double calculateDistanceToLine(const QPoint& mousePos, const QPoint& lineStart, const QPoint& lineEnd);
 };

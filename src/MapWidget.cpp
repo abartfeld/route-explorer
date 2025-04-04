@@ -251,6 +251,7 @@ void MapWidget::paintEvent(QPaintEvent* event) {
     // Draw the route with segments if available
     if (mHasSegments && !mRouteSegments.isEmpty()) {
         // First draw a thicker shadow/outline to make route stand out against map
+        // CHANGE: Reduce shadow thickness from 7.0 to 5.0 for a sleeker look
         if (mRouteCoordinates.size() > 1) {
             QPainterPath basePath;
             bool first = true;
@@ -265,12 +266,13 @@ void MapWidget::paintEvent(QPaintEvent* event) {
                 }
             }
             
-            // Draw an outline/shadow with higher thickness
-            painter.setPen(QPen(QColor(50, 50, 50, 80), 7.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            // Draw an outline/shadow with reduced thickness
+            painter.setPen(QPen(QColor(50, 50, 50, 80), 5.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
             painter.drawPath(basePath);
         }
         
         // Then draw each segment with its color
+        // CHANGE: Reduce line thickness from 5.0 to 3.5
         for (const auto& segment : mRouteSegments) {
             if (segment.coordinates.size() < 2) continue;
             
@@ -287,9 +289,9 @@ void MapWidget::paintEvent(QPaintEvent* event) {
                 }
             }
             
-            // Draw the segment with enhanced colors
+            // Draw the segment with enhanced colors and reduced thickness
             QColor enhancedColor = enhanceColor(segment.color);
-            painter.setPen(QPen(enhancedColor, 5.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            painter.setPen(QPen(enhancedColor, 3.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
             painter.drawPath(path);
         }
     } else if (mRouteCoordinates.size() > 1) {
@@ -307,12 +309,12 @@ void MapWidget::paintEvent(QPaintEvent* event) {
             }
         }
         
-        // Draw route outline/shadow for better contrast
-        painter.setPen(QPen(QColor(0, 0, 0, 80), 7.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        // CHANGE: Reduce shadow thickness from 7.0 to 5.0
+        painter.setPen(QPen(QColor(0, 0, 0, 80), 5.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
         painter.drawPath(path);
         
-        // Draw the route with enhanced color
-        painter.setPen(QPen(QColor(0, 120, 255), 5.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        // CHANGE: Reduce route thickness from 5.0 to 3.5
+        painter.setPen(QPen(QColor(0, 120, 255), 3.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
         painter.drawPath(path);
     }
     
@@ -332,6 +334,14 @@ void MapWidget::paintEvent(QPaintEvent* event) {
     painter.setBrush(QBrush(QColor("#FF4136"))); // Brighter red
     painter.setPen(QPen(Qt::white, 2.5));
     painter.drawEllipse(markerRect);
+    
+    // Draw hover indicator if hovering over the route
+    if (mHoverPointIndex >= 0 && mShowTooltip) {
+        const int hoverSize = 8;
+        painter.setPen(QPen(Qt::black, 2));
+        painter.setBrush(QBrush(Qt::white));
+        painter.drawEllipse(mHoverPoint.x() - hoverSize/2, mHoverPoint.y() - hoverSize/2, hoverSize, hoverSize);
+    }
 }
 
 void MapWidget::mousePressEvent(QMouseEvent* event)
@@ -369,6 +379,54 @@ void MapWidget::mouseMoveEvent(QMouseEvent* event)
         
         // Redraw the map
         update();
+    } else {
+        // Check if we're hovering over the route
+        int newHoverIndex = findClosestRoutePoint(event->pos());
+        
+        if (newHoverIndex >= 0 && newHoverIndex < static_cast<int>(mTrackPoints.size())) {
+            if (newHoverIndex != mHoverPointIndex) {
+                mHoverPointIndex = newHoverIndex;
+                mShowTooltip = true;
+                
+                // Convert to screen coordinates for tooltip and highlighting
+                if (mHoverPointIndex >= 0 && mHoverPointIndex < static_cast<int>(mRouteCoordinates.size())) {
+                    mHoverPoint = geoToPixel(mRouteCoordinates[mHoverPointIndex], mCenterCoordinate, mZoom, size());
+                    
+                    // Show tooltip with track information
+                    if (mHoverPointIndex >= 0 && mHoverPointIndex < static_cast<int>(mTrackPoints.size())) {
+                        const TrackPoint& point = mTrackPoints[mHoverPointIndex];
+                        
+                        // Use pre-calculated gradient for more consistent values
+                        double gradient = point.gradient;
+                        
+                        // Format the tooltip
+                        QString tooltip = QString(
+                            "<div style='background-color:rgba(255,255,255,0.9); padding:6px; border-radius:4px; border: 1px solid #ccc;'>"
+                            "<b>Distance:</b> %1 mi<br>"
+                            "<b>Elevation:</b> %2 ft<br>"
+                            "<b>Gradient:</b> %3%"
+                            "</div>"
+                        ).arg(point.distance * 0.000621371, 0, 'f', 2)  // Convert to miles
+                         .arg(point.elevation * 3.28084, 0, 'f', 0)     // Convert to feet
+                         .arg(gradient, 0, 'f', 1);                     // Use pre-calculated gradient
+                         
+                        QToolTip::showText(event->globalPos(), tooltip, this);
+                        
+                        // Emit signal for slider to update
+                        emit routeHovered(mHoverPointIndex);
+                    }
+                }
+                
+                update(); // Redraw to show hover indicator
+            }
+            return;
+        } else if (mHoverPointIndex >= 0) {
+            // Mouse moved away from route
+            mHoverPointIndex = -1;
+            mShowTooltip = false;
+            QToolTip::hideText();
+            update(); // Redraw to hide hover indicator
+        }
     }
 }
 
@@ -578,4 +636,70 @@ QColor MapWidget::enhanceColor(const QColor& color) const {
     
     enhanced.setHsv(h, s, v, a);
     return enhanced;
+}
+
+void MapWidget::setTrackPoints(const std::vector<TrackPoint>& points) {
+    mTrackPoints = points;
+}
+
+// Helper method to find the closest point on the route to the mouse position
+int MapWidget::findClosestRoutePoint(const QPoint& mousePos) {
+    if (mRouteCoordinates.isEmpty()) {
+        return -1;
+    }
+    
+    // Threshold for how close the mouse needs to be to the route (in pixels)
+    const double HOVER_THRESHOLD = 10.0;
+    
+    int closestIndex = -1;
+    double minDistance = HOVER_THRESHOLD;
+    
+    // Check each line segment in the route
+    for (int i = 0; i < mRouteCoordinates.size() - 1; i++) {
+        QPoint p1 = geoToPixel(mRouteCoordinates[i], mCenterCoordinate, mZoom, size());
+        QPoint p2 = geoToPixel(mRouteCoordinates[i+1], mCenterCoordinate, mZoom, size());
+        
+        double distance = calculateDistanceToLine(mousePos, p1, p2);
+        
+        if (distance < minDistance) {
+            minDistance = distance;
+            
+            // Determine which endpoint is closer
+            double d1 = QLineF(mousePos, p1).length();
+            double d2 = QLineF(mousePos, p2).length();
+            closestIndex = (d1 < d2) ? i : i+1;
+        }
+    }
+    
+    return closestIndex;
+}
+
+// Calculate the distance from a point to a line segment
+double MapWidget::calculateDistanceToLine(const QPoint& point, const QPoint& lineStart, const QPoint& lineEnd) {
+    QLineF line(lineStart, lineEnd);
+    
+    // If the line is a point, return distance to that point
+    if (lineStart == lineEnd) {
+        return QLineF(point, lineStart).length();
+    }
+    
+    // Calculate projection of point onto line
+    double lineLength = line.length();
+    double u = ((point.x() - lineStart.x()) * (lineEnd.x() - lineStart.x()) + 
+               (point.y() - lineStart.y()) * (lineEnd.y() - lineStart.y())) / 
+               (lineLength * lineLength);
+    
+    // If projection is outside the line segment, use distance to closest endpoint
+    if (u < 0) {
+        return QLineF(point, lineStart).length();
+    }
+    if (u > 1) {
+        return QLineF(point, lineEnd).length();
+    }
+    
+    // Calculate the closest point on the line segment
+    QPointF closestPoint = lineStart + u * (lineEnd - lineStart);
+    
+    // Return the distance to that point
+    return QLineF(point, closestPoint).length();
 }
