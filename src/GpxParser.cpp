@@ -1,4 +1,4 @@
-#include "gpxparser.h"
+#include "GpxParser.h"
 #include <QFile>
 #include <QXmlStreamReader>
 #include <QDebug>

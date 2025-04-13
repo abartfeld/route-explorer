@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+#include "MainWindow.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -105,221 +105,129 @@ void MainWindow::setupUi() {
     m_landingPage = new LandingPage(this);
     m_mainStack->addWidget(m_landingPage);
     
+    // Create main view
+    m_mainView = new QWidget(this);
+    QVBoxLayout* mainLayout = new QVBoxLayout(m_mainView);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    
+    // Create toolbar for main view
+    QToolBar* toolBar = new QToolBar(this);
+    toolBar->setIconSize(QSize(24, 24));
+    toolBar->setMovable(false);
+    
+    QAction* homeAction = toolBar->addAction(QIcon(":/icons/home.svg"), "Home");
+    connect(homeAction, &QAction::triggered, this, &MainWindow::showLandingPage);
+    
+    QAction* openAction = toolBar->addAction(QIcon(":/icons/open-file.svg"), "Open File");
+    connect(openAction, &QAction::triggered, this, QOverload<>::of(&MainWindow::openFile));
+    
+    toolBar->addSeparator();
+    
+    QAction* settingsAction = toolBar->addAction(QIcon(":/icons/settings.svg"), "Settings");
+    connect(settingsAction, &QAction::triggered, this, &MainWindow::showSettings);
+    
+    mainLayout->addWidget(toolBar);
+    
+    // Create tab widget for the main view
+    m_tabWidget = new QTabWidget(m_mainView);
+    
+    // Create the map tab
+    QWidget* mapTab = new QWidget();
+    QVBoxLayout* mapTabLayout = new QVBoxLayout(mapTab);
+    mapTabLayout->setContentsMargins(4, 4, 4, 4);
+    
+    // Create a splitter for map and stats
+    QSplitter* mapSplitter = new QSplitter(Qt::Horizontal);
+    
+    // Create the map widget
+    m_mapView = new MapWidget();
+    
+    // Create the stats widget
+    m_statsWidget = new TrackStatsWidget();
+    
+    // Add widgets to splitter
+    mapSplitter->addWidget(m_mapView);
+    mapSplitter->addWidget(m_statsWidget);
+    
+    // Set default sizes (70% map, 30% stats)
+    mapSplitter->setSizes(QList<int>() << 700 << 300);
+    
+    // Add the splitter to the map tab
+    mapTabLayout->addWidget(mapSplitter);
+    
+    // Create elevation profile
+    QGroupBox* elevationGroup = new QGroupBox("Elevation Profile");
+    QVBoxLayout* elevationLayout = new QVBoxLayout(elevationGroup);
+    
+    // Create the elevation plot
+    m_elevationPlot = new QCustomPlot();
+    m_elevationPlot->setMinimumHeight(150);
+    m_elevationPlot->addGraph(); // Elevation profile graph
+    m_elevationPlot->addGraph(); // Position marker graph (will be a single point)
+    m_elevationPlot->graph(0)->setPen(QPen(QColor(64, 115, 244)));  // Blue line for elevation
+    m_elevationPlot->graph(0)->setBrush(QBrush(QColor(200, 230, 255, 100)));  // Light blue fill
+    m_elevationPlot->graph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, QPen(Qt::black), QBrush(Qt::red), 10));  // Red position marker
+    m_elevationPlot->graph(1)->setLineStyle(QCPGraph::lsNone);  // No line, only points
+    
+    // Set axis labels
+    m_elevationPlot->xAxis->setLabel("Distance (mi)");
+    m_elevationPlot->yAxis->setLabel("Elevation (ft)");
+    m_elevationPlot->xAxis->setTickLabelFont(QFont("Roboto", 8));
+    m_elevationPlot->yAxis->setTickLabelFont(QFont("Roboto", 8));
+    
+    // Set background color
+    m_elevationPlot->setBackground(QBrush(QColor(255, 255, 255)));
+    m_elevationPlot->axisRect()->setBackground(QBrush(QColor(245, 245, 245)));
+    
+    // Interactive features
+    m_elevationPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+    
+    // Add elevation plot to layout
+    elevationLayout->addWidget(m_elevationPlot);
+    
+    // Create position slider
+    m_positionSlider = new QSlider(Qt::Horizontal);
+    m_positionSlider->setRange(0, 1000);
+    m_positionSlider->setValue(0);
+    m_positionSlider->setEnabled(false);
+    elevationLayout->addWidget(m_positionSlider);
+    
+    // Add elevation group to map tab
+    mapTabLayout->addWidget(elevationGroup);
+    
+    // Add map tab to tab widget
+    m_tabWidget->addTab(mapTab, QIcon(":/icons/map-marker.svg"), "Map View");
+    
+    // Create the 3D view tab
+    QWidget* view3DTab = new QWidget();
+    QVBoxLayout* view3DLayout = new QVBoxLayout(view3DTab);
+    
+    // Create 3D elevation view
+    m_elevation3DView = new ElevationView3D();
+    view3DLayout->addWidget(m_elevation3DView);
+    
+    // Add 3D view tab to tab widget
+    m_tabWidget->addTab(view3DTab, QIcon(":/icons/map-marker.svg"), "3D View");
+    
+    // Add tab widget to main layout
+    mainLayout->addWidget(m_tabWidget);
+    
+    // Add main view to the stack widget
+    m_mainStack->addWidget(m_mainView);
+    
+    // Connect signals
+    connect(m_positionSlider, &QSlider::valueChanged, this, &MainWindow::updatePosition);
+    connect(m_mapView, &MapWidget::routeHovered, this, &MainWindow::handleRouteHover);
+    connect(m_elevation3DView, &ElevationView3D::positionChanged, this, &MainWindow::handleFlythrough3DPositionChanged);
+    
     // Connect landing page signals
     connect(m_landingPage, &LandingPage::openFile, this, 
             QOverload<const QString&>::of(&MainWindow::openFile));
     connect(m_landingPage, &LandingPage::browse, this, 
             QOverload<>::of(&MainWindow::openFile));
     connect(m_landingPage, &LandingPage::createNewRoute, this, &MainWindow::createNewRoute);
-    
-    // Create main view
-    m_mainView = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout(m_mainView);
-    mainLayout->setContentsMargins(12, 12, 12, 12);
-    mainLayout->setSpacing(12);
-    
-    // Create a tab widget to hold map and 3D views
-    m_tabWidget = new QTabWidget(this);
-    m_tabWidget->setDocumentMode(true);
-    m_tabWidget->setTabPosition(QTabWidget::North);
-    m_tabWidget->setStyleSheet(
-        "QTabWidget::pane { background-color: #f5f5f5; }"
-        "QTabBar::tab { padding: 8px 12px; background-color: #e0e0e0; margin-right: 2px; }"
-        "QTabBar::tab:selected { background-color: #f5f5f5; border-bottom: 2px solid #2196F3; }"
-        "QTabBar::tab:hover { background-color: #e8e8e8; }"
-    );
-    
-    // Create the 2D map tab
-    QWidget* mapTab = new QWidget();
-    QVBoxLayout* mapLayout = new QVBoxLayout(mapTab);
-    mapLayout->setContentsMargins(0, 0, 0, 0);
-    
-    // Upper panel with map and stats side by side
-    QWidget *upperPanel = new QWidget();
-    QHBoxLayout *upperLayout = new QHBoxLayout(upperPanel);
-    upperLayout->setContentsMargins(0, 0, 0, 0);
-    upperLayout->setSpacing(12);
-    
-    // Create the map widget
-    m_mapView = new MapWidget(this);
-    m_mapView->setMinimumSize(400, 300);
-    QFrame *mapFrame = new QFrame();
-    mapFrame->setFrameShape(QFrame::StyledPanel);
-    mapFrame->setFrameShadow(QFrame::Plain);
-    QVBoxLayout *mapLayoutInner = new QVBoxLayout(mapFrame);
-    mapLayoutInner->setContentsMargins(0, 0, 0, 0);
-    mapLayoutInner->addWidget(m_mapView);
-    upperLayout->addWidget(mapFrame, 1); // Map gets stretch priority
-    
-    // Create the stats widget
-    m_statsWidget = new TrackStatsWidget(this);
-    upperLayout->addWidget(m_statsWidget, 0); // No stretch - fixed width
-    
-    // Add the upper panel to main layout
-    mapLayout->addWidget(upperPanel, 7); // Upper panel gets 7/10 of vertical space
-    
-    // Create the bottom panel containing the elevation profile
-    QWidget *bottomPanel = new QWidget();
-    QVBoxLayout *bottomLayout = new QVBoxLayout(bottomPanel);
-    bottomLayout->setContentsMargins(0, 0, 0, 0);
-    bottomLayout->setSpacing(8);
-    mapLayout->addWidget(bottomPanel, 3); // Elevation gets 3/10 of vertical space
-    
-    // Create the elevation profile plot with themed colors
-    m_elevationPlot = new QCustomPlot();
-    m_elevationPlot->setMinimumHeight(120);
-    m_elevationPlot->setBackground(QColor("#ffffff"));
-    m_elevationPlot->xAxis->setBasePen(QPen(QColor("#9e9e9e"), 1));
-    m_elevationPlot->yAxis->setBasePen(QPen(QColor("#9e9e9e"), 1));
-    m_elevationPlot->xAxis->setTickPen(QPen(QColor("#9e9e9e"), 1));
-    m_elevationPlot->yAxis->setTickPen(QPen(QColor("#9e9e9e"), 1));
-    m_elevationPlot->xAxis->setSubTickPen(QPen(QColor("#bdbdbd"), 1));
-    m_elevationPlot->yAxis->setSubTickPen(QPen(QColor("#bdbdbd"), 1));
-    m_elevationPlot->xAxis->setTickLabelColor(QColor("#424242"));
-    m_elevationPlot->yAxis->setTickLabelColor(QColor("#424242"));
-    m_elevationPlot->xAxis->setLabelColor(QColor("#424242"));
-    m_elevationPlot->yAxis->setLabelColor(QColor("#424242"));
-    m_elevationPlot->xAxis->grid()->setPen(QPen(QColor("#e0e0e0"), 1, Qt::DotLine));
-    m_elevationPlot->yAxis->grid()->setPen(QPen(QColor("#e0e0e0"), 1, Qt::DotLine));
-    m_elevationPlot->xAxis->grid()->setSubGridPen(QPen(QColor("#f5f5f5"), 1, Qt::DotLine));
-    m_elevationPlot->yAxis->grid()->setSubGridPen(QPen(QColor("#f5f5f5"), 1, Qt::DotLine));
-    m_elevationPlot->xAxis->setLabel("Distance (miles)");
-    m_elevationPlot->yAxis->setLabel("Elevation (feet)");
-    
-    // Create graph for elevation profile
-    m_elevationPlot->addGraph();
-    m_elevationPlot->graph(0)->setPen(QPen(QColor("#2196F3"), 2));
-    m_elevationPlot->graph(0)->setBrush(QBrush(QColor(33, 150, 243, 50)));
-    
-    // Create graph for current position marker
-    m_elevationPlot->addGraph();
-    m_elevationPlot->graph(1)->setLineStyle(QCPGraph::lsNone);
-    m_elevationPlot->graph(1)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, QColor("#F44336"), 8));
-    
-    // Disable interactions with the plot
-    m_elevationPlot->setInteraction(QCP::iRangeDrag, false);
-    m_elevationPlot->setInteraction(QCP::iRangeZoom, false);
-    
-    // Adjust the plot margins to take full width
-    m_elevationPlot->axisRect()->setAutoMargins(QCP::msBottom|QCP::msTop);
-    m_elevationPlot->axisRect()->setMargins(QMargins(50, 10, 10, 20)); // Left margin for Y-axis
-    
-    bottomLayout->addWidget(m_elevationPlot);
-    
-    // Create slider for position with Material Design styling
-    m_positionSlider = new QSlider(Qt::Horizontal, this);
-    m_positionSlider->setEnabled(false);
-    
-    bottomLayout->addWidget(m_positionSlider);
-    
-    // Update slider style after plot is created
-    int yAxisPos = m_elevationPlot->yAxis->axisRect()->left();
-    int rightMargin = 10; // Small right margin
-    
-    m_positionSlider->setStyleSheet(
-        QString("QSlider::groove:horizontal {"
-        "  height: 4px;"
-        "  background: #e0e0e0;"
-        "  border-radius: 2px;"
-        "  margin-left: %1px;" // Align with Y-axis exactly
-        "  margin-right: %2px;" // Small right margin
-        "}"
-        "QSlider::handle:horizontal {"
-        "  background: #2196F3;"
-        "  border: none;"
-        "  width: 16px;"
-        "  height: 16px;"
-        "  margin: -6px 0px;" // Center it exactly on the track
-        "  border-radius: 8px;"
-        "}"
-        "QSlider::sub-page:horizontal {"
-        "  background: #2196F3;"
-        "  border-radius: 2px;"
-        "}").arg(yAxisPos).arg(rightMargin));
-    
-    // Create toolbar with Material Design-inspired styling
-    QToolBar *toolBar = addToolBar("Main Toolbar");
-    toolBar->setMovable(false);
-    toolBar->setIconSize(QSize(24, 24));
-    toolBar->setStyleSheet("QToolBar { background: #ffffff; border-bottom: 1px solid #e0e0e0; spacing: 8px; }");
-    
-    // Add actions
-    QAction *openAction = toolBar->addAction(QIcon(":/icons/open-file.svg"), "Open GPX File");
-    openAction->setShortcut(QKeySequence::Open);
-    connect(openAction, &QAction::triggered, this, [this]() {
-        openFile();  // Call the no-parameter version explicitly
-    });
-    
-    // Add home button to toolbar
-    QAction *homeAction = toolBar->addAction(QIcon(":/icons/home.svg"), "Home");
-    connect(homeAction, &QAction::triggered, this, &MainWindow::showLandingPage);
-    
-    toolBar->addSeparator();
-    
-    QAction *zoomInAction = toolBar->addAction(QIcon(":/icons/zoom-in.svg"), "Zoom In");
-    QAction *zoomOutAction = toolBar->addAction(QIcon(":/icons/zoom-out.svg"), "Zoom Out");
-    
-    // Connect zoom buttons to map
-    connect(zoomInAction, &QAction::triggered, [this]() {
-        // Create wheel event with correct parameters for Qt
-        QPointF pos(m_mapView->width()/2, m_mapView->height()/2);
-        QPointF globalPos = m_mapView->mapToGlobal(pos.toPoint());
-        QPoint pixelDelta(0, 0);
-        QPoint angleDelta(0, 120);
-        Qt::MouseButtons buttons = Qt::NoButton;
-        Qt::KeyboardModifiers modifiers = Qt::NoModifier;
-        QWheelEvent wheelEvent(pos, globalPos, pixelDelta, angleDelta,
-                           buttons, modifiers, Qt::NoScrollPhase, false,
-                           Qt::MouseEventNotSynthesized);
-        QCoreApplication::sendEvent(m_mapView, &wheelEvent);
-    });
-    
-    connect(zoomOutAction, &QAction::triggered, [this]() {
-        // Create wheel event with correct parameters for Qt
-        QPointF pos(m_mapView->width()/2, m_mapView->height()/2);
-        QPointF globalPos = m_mapView->mapToGlobal(pos.toPoint());
-        QPoint pixelDelta(0, 0);
-        QPoint angleDelta(0, -120);
-        Qt::MouseButtons buttons = Qt::NoButton;
-        Qt::KeyboardModifiers modifiers = Qt::NoModifier;
-        QWheelEvent wheelEvent(pos, globalPos, pixelDelta, angleDelta,
-                           buttons, modifiers, Qt::NoScrollPhase, false,
-                           Qt::MouseEventNotSynthesized);
-        QCoreApplication::sendEvent(m_mapView, &wheelEvent);
-    });
-    
-    // Create a status bar with Material Design styling
-    statusBar()->setStyleSheet("QStatusBar { background: #ffffff; color: #757575; }");
-    
-    // Set up position slider
-    connect(m_positionSlider, &QSlider::valueChanged, this, &MainWindow::updatePosition);
-    
-    // Add connection for route hover events
-    connect(m_mapView, &MapWidget::routeHovered, this, &MainWindow::handleRouteHover);
-    
-    // Create the 3D elevation view tab
-    m_elevation3DView = new ElevationView3D();
-    
-    // Add tabs
-    m_tabWidget->addTab(mapTab, "Map View");
-    m_tabWidget->addTab(m_elevation3DView, "3D Elevation");
-    
-    // Set the tab widget as the central widget
-    setCentralWidget(m_tabWidget);
-    
-    // Connect 3D view signals
-    connect(m_elevation3DView, &ElevationView3D::positionChanged, 
-            this, &MainWindow::handleFlythrough3DPositionChanged);
-    
-    // Add tab switching action to toolbar
-    QAction* switchToMapAction = toolBar->addAction("Map View");
-    connect(switchToMapAction, &QAction::triggered, [this](){ switchToTab(0); });
-    
-    QAction* switchTo3DAction = toolBar->addAction("3D View");
-    connect(switchTo3DAction, &QAction::triggered, [this](){ switchToTab(1); });
-    
-    // Add main view to stack
-    m_mainStack->addWidget(m_mainView);
+    connect(m_landingPage, &LandingPage::showSettings, this, &MainWindow::showSettings);
+    connect(m_landingPage, &LandingPage::show3DView, this, &MainWindow::show3DView);
 }
 
 void MainWindow::switchToTab(int tabIndex) {
@@ -704,4 +612,185 @@ void MainWindow::handleFlythrough3DPositionChanged(int pointIndex) {
     m_statsWidget->updatePosition(point, pointIndex, m_gpxParser);
     
     m_updatingFrom3D = false;
+}
+
+void MainWindow::showSettings() {
+    // Create a dialog for application settings
+    QDialog settingsDialog(this);
+    settingsDialog.setWindowTitle("Route Explorer Settings");
+    settingsDialog.setMinimumWidth(450);
+    
+    QVBoxLayout* layout = new QVBoxLayout(&settingsDialog);
+    
+    // Create tabs for different settings categories
+    QTabWidget* tabWidget = new QTabWidget(&settingsDialog);
+    
+    // General settings tab
+    QWidget* generalTab = new QWidget();
+    QVBoxLayout* generalLayout = new QVBoxLayout(generalTab);
+    
+    // Units group
+    QGroupBox* unitsGroup = new QGroupBox("Measurement Units");
+    QVBoxLayout* unitsLayout = new QVBoxLayout(unitsGroup);
+    
+    QRadioButton* metricRadio = new QRadioButton("Metric (kilometers, meters)");
+    QRadioButton* imperialRadio = new QRadioButton("Imperial (miles, feet)");
+    
+    QSettings settings;
+    bool useMetric = settings.value("useMetricUnits", false).toBool();
+    
+    metricRadio->setChecked(useMetric);
+    imperialRadio->setChecked(!useMetric);
+    
+    unitsLayout->addWidget(metricRadio);
+    unitsLayout->addWidget(imperialRadio);
+    generalLayout->addWidget(unitsGroup);
+    
+    // Map settings group
+    QGroupBox* mapGroup = new QGroupBox("Map Settings");
+    QVBoxLayout* mapLayout = new QVBoxLayout(mapGroup);
+    
+    QCheckBox* showLabelsCheck = new QCheckBox("Show distance markers");
+    showLabelsCheck->setChecked(settings.value("showDistanceMarkers", true).toBool());
+    
+    QCheckBox* showElevationCheck = new QCheckBox("Show elevation color coding");
+    showElevationCheck->setChecked(settings.value("showElevationColors", true).toBool());
+    
+    mapLayout->addWidget(showLabelsCheck);
+    mapLayout->addWidget(showElevationCheck);
+    generalLayout->addWidget(mapGroup);
+    
+    // Add spacer
+    generalLayout->addStretch(1);
+    
+    // 3D View Settings tab
+    QWidget* view3DTab = new QWidget();
+    QVBoxLayout* view3DLayout = new QVBoxLayout(view3DTab);
+    
+    QGroupBox* performanceGroup = new QGroupBox("Performance Settings");
+    QVBoxLayout* perfLayout = new QVBoxLayout(performanceGroup);
+    
+    QLabel* qualityLabel = new QLabel("Rendering Quality:");
+    QComboBox* qualityCombo = new QComboBox();
+    qualityCombo->addItem("Low (Better Performance)");
+    qualityCombo->addItem("Medium");
+    qualityCombo->addItem("High (Better Quality)");
+    qualityCombo->setCurrentIndex(settings.value("3DRenderingQuality", 1).toInt());
+    
+    QHBoxLayout* qualityLayout = new QHBoxLayout();
+    qualityLayout->addWidget(qualityLabel);
+    qualityLayout->addWidget(qualityCombo);
+    perfLayout->addLayout(qualityLayout);
+    
+    QLabel* elevScaleLabel = new QLabel("Elevation Scale Factor:");
+    QSlider* elevScaleSlider = new QSlider(Qt::Horizontal);
+    elevScaleSlider->setRange(5, 30);
+    elevScaleSlider->setValue(settings.value("elevationScale", 15).toInt());
+    elevScaleSlider->setTickPosition(QSlider::TicksBelow);
+    
+    QHBoxLayout* elevScaleLayout = new QHBoxLayout();
+    elevScaleLayout->addWidget(elevScaleLabel);
+    elevScaleLayout->addWidget(elevScaleSlider);
+    perfLayout->addLayout(elevScaleLayout);
+    
+    view3DLayout->addWidget(performanceGroup);
+    
+    // Camera settings group
+    QGroupBox* cameraGroup = new QGroupBox("Camera Settings");
+    QVBoxLayout* cameraLayout = new QVBoxLayout(cameraGroup);
+    
+    QCheckBox* flyoverModeCheck = new QCheckBox("Start in flyover mode");
+    flyoverModeCheck->setChecked(settings.value("flyoverModeDefault", false).toBool());
+    
+    QLabel* flySpeedLabel = new QLabel("Default fly speed:");
+    QSlider* flySpeedSlider = new QSlider(Qt::Horizontal);
+    flySpeedSlider->setRange(1, 10);
+    flySpeedSlider->setValue(settings.value("flythroughSpeed", 5).toInt());
+    flySpeedSlider->setTickPosition(QSlider::TicksBelow);
+    
+    cameraLayout->addWidget(flyoverModeCheck);
+    
+    QHBoxLayout* flySpeedLayout = new QHBoxLayout();
+    flySpeedLayout->addWidget(flySpeedLabel);
+    flySpeedLayout->addWidget(flySpeedSlider);
+    cameraLayout->addLayout(flySpeedLayout);
+    
+    view3DLayout->addWidget(cameraGroup);
+    view3DLayout->addStretch(1);
+    
+    // Add tabs to the tab widget
+    tabWidget->addTab(generalTab, "General");
+    tabWidget->addTab(view3DTab, "3D View");
+    
+    layout->addWidget(tabWidget);
+    
+    // Add dialog buttons
+    QDialogButtonBox* buttonBox = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::Apply);
+    
+    connect(buttonBox, &QDialogButtonBox::accepted, [&]() {
+        // Save all settings
+        settings.setValue("useMetricUnits", metricRadio->isChecked());
+        settings.setValue("showDistanceMarkers", showLabelsCheck->isChecked());
+        settings.setValue("showElevationColors", showElevationCheck->isChecked());
+        settings.setValue("3DRenderingQuality", qualityCombo->currentIndex());
+        settings.setValue("elevationScale", elevScaleSlider->value());
+        settings.setValue("flyoverModeDefault", flyoverModeCheck->isChecked());
+        settings.setValue("flythroughSpeed", flySpeedSlider->value());
+        
+        // Apply settings to current view
+        if (m_elevation3DView) {
+            m_elevation3DView->setElevationScale(elevScaleSlider->value() / 10.0f);
+        }
+        
+        settingsDialog.accept();
+    });
+    
+    connect(buttonBox, &QDialogButtonBox::rejected, &settingsDialog, &QDialog::reject);
+    
+    connect(buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, [&]() {
+        // Save all settings
+        settings.setValue("useMetricUnits", metricRadio->isChecked());
+        settings.setValue("showDistanceMarkers", showLabelsCheck->isChecked());
+        settings.setValue("showElevationColors", showElevationCheck->isChecked());
+        settings.setValue("3DRenderingQuality", qualityCombo->currentIndex());
+        settings.setValue("elevationScale", elevScaleSlider->value());
+        settings.setValue("flyoverModeDefault", flyoverModeCheck->isChecked());
+        settings.setValue("flythroughSpeed", flySpeedSlider->value());
+        
+        // Apply settings to current view
+        if (m_elevation3DView) {
+            m_elevation3DView->setElevationScale(elevScaleSlider->value() / 10.0f);
+        }
+    });
+    
+    layout->addWidget(buttonBox);
+    
+    settingsDialog.exec();
+}
+
+void MainWindow::show3DView() {
+    // First show the main view
+    showMainView();
+    
+    // If there's no data loaded, offer to load a sample route
+    if (m_gpxParser.getPoints().empty()) {
+        QMessageBox::StandardButton reply = QMessageBox::question(this, 
+            "No Route Loaded", 
+            "No route is currently loaded. Would you like to load a sample route for viewing in 3D?",
+            QMessageBox::Yes | QMessageBox::No);
+            
+        if (reply == QMessageBox::Yes) {
+            // Try to load the example route
+            QString samplePath = ":/samples/example_route.gpx";
+            openFile(samplePath);
+        } else {
+            // Return to landing page if user doesn't want to load a sample
+            showLandingPage();
+            return;
+        }
+    }
+    
+    // Switch to the 3D tab (index 1)
+    switchToTab(1);
 }

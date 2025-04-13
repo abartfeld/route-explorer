@@ -6,7 +6,7 @@
 #include <QTabWidget>
 #include <QStackedWidget>
 #include "../third_party/qcustomplot.h"
-#include "gpxparser.h"
+#include "GpxParser.h"
 #include "MapWidget.h"
 #include "TrackStatsWidget.h"
 #include "ElevationView3D.h"
@@ -19,6 +19,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void showLandingPage();
 
 private slots:
     void openFile();
@@ -28,8 +29,9 @@ private slots:
     void handleFlythrough3DPositionChanged(int pointIndex);
     void switchToTab(int tabIndex);
     void showMainView();
-    void showLandingPage();
     void createNewRoute();
+    void showSettings();
+    void show3DView();
 
 private:
     void setupUi();

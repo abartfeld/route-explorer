@@ -1,10 +1,11 @@
-#include "mainwindow.h"
+#include "MainWindow.h"
 #include "debug_helper.h"
 #include <QApplication>
 #include <QFile>
 #include <QDir>
 #include <QStandardPaths>
 #include <QDebug>
+#include <QTimer>
 
 /**
  * Initialize application-specific folders and settings
@@ -55,6 +56,10 @@ int main(int argc, char *argv[])
     
     // Create and show the main window
     MainWindow mainWindow;
+    
+    // Explicitly force showing the landing page (to fix startup issue)
+    QTimer::singleShot(0, &mainWindow, &MainWindow::showLandingPage);
+    
     mainWindow.show();
     
     return app.exec();

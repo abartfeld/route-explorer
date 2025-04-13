@@ -60,9 +60,9 @@ include_directories(
 # Source files - ADD NEW FILES HERE
 set(SOURCES
     src/main.cpp
-    src/mainwindow.cpp
+    src/MainWindow.cpp
     src/MapWidget.cpp
-    src/gpxparser.cpp
+    src/GpxParser.cpp
     src/TrackStatsWidget.cpp
     src/ElevationView3D.cpp
     src/LandingPage.cpp
@@ -71,9 +71,9 @@ set(SOURCES
 
 # Header files - ADD NEW FILES HERE
 set(HEADERS
-    include/mainwindow.h
+    include/MainWindow.h
     include/MapWidget.h
-    include/gpxparser.h
+    include/GpxParser.h
     include/TrackStatsWidget.h
     include/ElevationView3D.h
     include/LandingPage.h

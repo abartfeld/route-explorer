@@ -8,6 +8,9 @@
 #include <QFile>
 #include <QMessageBox>
 #include <QPainter>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QDate>
 
 LandingPage::LandingPage(QWidget *parent)
     : QWidget(parent),
@@ -18,6 +21,11 @@ LandingPage::LandingPage(QWidget *parent)
     loadTips();
     updateRecentFiles();
     loadSampleRoutes();
+    
+    // Show a welcome message with current date
+    QString welcomeMessage = "Welcome to Route Explorer! Today is " + 
+                            QDate::currentDate().toString("dddd, MMMM d, yyyy");
+    statusBar()->showMessage(welcomeMessage, 5000);
 }
 
 void LandingPage::setupStyles() {
@@ -32,6 +40,7 @@ void LandingPage::setupStyles() {
         "QLabel#titleLabel { font-family: 'Roboto'; font-size: 32px; font-weight: bold; color: #2196F3; }"
         "QLabel#subtitleLabel { font-family: 'Roboto'; font-size: 16px; color: #757575; }"
         "QLabel#sectionLabel { font-family: 'Roboto'; font-size: 18px; font-weight: bold; color: #424242; }"
+        "QLabel#headerBanner { background-color: #2196F3; color: white; border-radius: 8px; }"
         "QLabel#tipLabel { font-family: 'Roboto'; font-size: 14px; color: #424242; background-color: #e3f2fd; "
         "                 padding: 12px; border-radius: 6px; }"
         "QPushButton#tipButton { background-color: transparent; border: none; color: #2196F3; }"
@@ -45,7 +54,19 @@ void LandingPage::setupStyles() {
         "                          border-radius: 8px; padding: 16px; text-align: left; }"
         "QPushButton#actionButton:hover { background-color: #f5f5f5; border: 1px solid #bdbdbd; }"
         "QLabel#actionDescription { font-family: 'Roboto'; font-size: 12px; color: #757575; }"
+        "QPushButton#linkButton { background-color: transparent; border: none; color: #2196F3; "
+        "                        text-decoration: underline; text-align: left; }"
+        "QPushButton#linkButton:hover { color: #1976D2; }"
+        "QStatusBar { background-color: #e3f2fd; color: #424242; border-top: 1px solid #bbdefb; }"
     );
+}
+
+QStatusBar* LandingPage::statusBar() {
+    if (!m_statusBar) {
+        m_statusBar = new QStatusBar(this);
+        m_statusBar->setSizeGripEnabled(false);
+    }
+    return m_statusBar;
 }
 
 void LandingPage::setupUI() {
@@ -57,14 +78,36 @@ void LandingPage::setupUI() {
     mainLayout->setContentsMargins(24, 24, 24, 24);
     mainLayout->setSpacing(16);
     
+    // Create a header banner with app logo
+    QLabel* headerBanner = new QLabel(this);
+    headerBanner->setObjectName("headerBanner");
+    headerBanner->setFixedHeight(100);
+    QHBoxLayout* headerLayout = new QHBoxLayout(headerBanner);
+    headerLayout->setContentsMargins(20, 10, 20, 10);
+    
+    // App logo (could be replaced with an actual image)
+    QLabel* logoLabel = new QLabel(this);
+    logoLabel->setPixmap(QIcon(":/icons/map-marker.svg").pixmap(64, 64));
+    headerLayout->addWidget(logoLabel);
+    
     // Title section
+    QVBoxLayout* titleLayout = new QVBoxLayout();
     m_titleLabel = new QLabel("Route Explorer", this);
     m_titleLabel->setObjectName("titleLabel");
-    mainLayout->addWidget(m_titleLabel);
+    titleLayout->addWidget(m_titleLabel);
     
     m_subtitleLabel = new QLabel("Visualize and analyze your GPX routes with ease", this);
     m_subtitleLabel->setObjectName("subtitleLabel");
-    mainLayout->addWidget(m_subtitleLabel);
+    titleLayout->addWidget(m_subtitleLabel);
+    
+    headerLayout->addLayout(titleLayout, 1);
+    
+    // Weather widget placeholder (could be expanded in the future)
+    QLabel* weatherWidget = new QLabel("Weather: 68°F, Sunny", this);
+    weatherWidget->setStyleSheet("color: white; font-size: 14px;");
+    headerLayout->addWidget(weatherWidget);
+    
+    mainLayout->addWidget(headerBanner);
     
     // Horizontal layout for main content
     QHBoxLayout* contentLayout = new QHBoxLayout();
@@ -144,6 +187,30 @@ void LandingPage::setupUI() {
         "Design a new route by placing points on the map"
     ));
     
+    // 3D Flyover button - adding this new option
+    rightLayout->addWidget(createActionButton(
+        "3D Flyover View", 
+        ":/icons/map-marker.svg", 
+        [this]() { handleShow3DViewClicked(); },
+        "Explore loaded routes in an immersive 3D view"
+    ));
+    
+    // Help/documentation button
+    rightLayout->addWidget(createActionButton(
+        "Help & Documentation", 
+        ":/icons/settings.svg",  // Using settings icon as placeholder 
+        [this]() { handleHelpClicked(); },
+        "Get started with tutorials and documentation"
+    ));
+    
+    // Settings button
+    rightLayout->addWidget(createActionButton(
+        "Settings", 
+        ":/icons/settings.svg", 
+        [this]() { handleSettingsClicked(); },
+        "Configure application settings and preferences"
+    ));
+    
     // Add spacer
     rightLayout->addStretch();
     
@@ -156,6 +223,40 @@ void LandingPage::setupUI() {
     contentLayout->addLayout(rightLayout, 1);
     
     mainLayout->addLayout(contentLayout, 1);
+    
+    // Create footer with links
+    QWidget* footer = new QWidget(this);
+    QHBoxLayout* footerLayout = new QHBoxLayout(footer);
+    footerLayout->setContentsMargins(0, 10, 0, 0);
+    
+    // Add useful links
+    QPushButton* websiteLink = new QPushButton("Website", this);
+    websiteLink->setObjectName("linkButton");
+    connect(websiteLink, &QPushButton::clicked, [this]() {
+        QDesktopServices::openUrl(QUrl("https://route-explorer.example.com"));
+    });
+    footerLayout->addWidget(websiteLink);
+    
+    QPushButton* reportBugLink = new QPushButton("Report Bug", this);
+    reportBugLink->setObjectName("linkButton");
+    connect(reportBugLink, &QPushButton::clicked, [this]() {
+        QDesktopServices::openUrl(QUrl("https://github.com/example/route-explorer/issues"));
+    });
+    footerLayout->addWidget(reportBugLink);
+    
+    QPushButton* releasesLink = new QPushButton("Latest Release", this);
+    releasesLink->setObjectName("linkButton");
+    connect(releasesLink, &QPushButton::clicked, [this]() {
+        QDesktopServices::openUrl(QUrl("https://github.com/example/route-explorer/releases"));
+    });
+    footerLayout->addWidget(releasesLink);
+    
+    footerLayout->addStretch(1);
+    
+    mainLayout->addWidget(footer);
+    
+    // Add status bar to the bottom
+    mainLayout->addWidget(statusBar());
     
     // Connect signals
     connect(m_recentFilesListWidget, &QListWidget::itemClicked, this, &LandingPage::handleRecentFileClicked);
@@ -223,6 +324,24 @@ void LandingPage::updateRecentFiles() {
 }
 
 void LandingPage::loadSampleRoutes() {
+    m_samplesListWidget->clear();
+    
+    // Check for sample files in the GPX directory first
+    QDir gpxDir("../gpx/");
+    if (gpxDir.exists()) {
+        for (const QString& fileName : gpxDir.entryList(QStringList() << "*.gpx", QDir::Files)) {
+            QListWidgetItem* item = new QListWidgetItem(QIcon(":/icons/map-marker.svg"), fileName);
+            item->setData(Qt::UserRole, gpxDir.filePath(fileName));
+            item->setToolTip("Sample route: " + fileName);
+            m_samplesListWidget->addItem(item);
+        }
+        
+        // If we found samples in the gpx directory, return
+        if (m_samplesListWidget->count() > 0) {
+            return;
+        }
+    }
+    
     // Check for sample files in the application's samples directory
     QDir samplesDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/samples");
     
@@ -256,6 +375,11 @@ void LandingPage::loadTips() {
     m_tips << "You can pause the flythrough animation at any point by clicking the pause button.";
     m_tips << "Use keyboard shortcuts: Ctrl+O to open files, + and - to zoom in/out.";
     m_tips << "The elevation profile shows your climb and descent throughout the route.";
+    m_tips << "Click the Home button in the toolbar to return to this landing page.";
+    m_tips << "Use the Map View tab for 2D analysis and 3D View for elevation visualization.";
+    m_tips << "The camera tilt slider in 3D View lets you adjust your perspective.";
+    m_tips << "You can adjust the speed of the 3D flythrough using the speed slider.";
+    m_tips << "GPX files can be downloaded from various fitness services or created with this app.";
 }
 
 void LandingPage::showNextTip() {
@@ -322,4 +446,30 @@ void LandingPage::handleBrowseClicked() {
 
 void LandingPage::handleTipButtonClicked() {
     showNextTip();
+}
+
+void LandingPage::handleHelpClicked() {
+    // Show a dialog with basic help information
+    QMessageBox::information(this, "Route Explorer Help",
+        "<h3>Getting Started with Route Explorer</h3>"
+        "<p>Route Explorer lets you visualize and analyze GPX route files from your outdoor activities.</p>"
+        "<h4>Basic Usage:</h4>"
+        "<ul>"
+        "<li>Open a GPX file from your computer</li>"
+        "<li>View your route on the map</li>"
+        "<li>Analyze elevation profiles</li>"
+        "<li>See detailed statistics</li>"
+        "<li>Experience your route in 3D</li>"
+        "</ul>"
+        "<p>For more detailed documentation, visit our website or check out the sample routes.</p>");
+}
+
+void LandingPage::handleSettingsClicked() {
+    // Emit a signal for the main window to handle settings
+    emit showSettings();
+}
+
+void LandingPage::handleShow3DViewClicked() {
+    // Emit a signal to show the 3D view
+    emit show3DView();
 }

@@ -17,7 +17,7 @@
 #include <QElapsedTimer>
 #include <vector>
 #include <memory>
-#include "gpxparser.h"
+#include "GpxParser.h"
 
 /**
  * @brief Widget for 3D visualization of elevation profiles

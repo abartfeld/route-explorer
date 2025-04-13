@@ -10,7 +10,7 @@
 #include <vector>
 #include <utility>
 #include "qcustomplot.h"
-#include "gpxparser.h"
+#include "GpxParser.h"
 
 // Define a segment struct for track analysis
 struct TrackSegment {
