@@ -78,6 +78,8 @@ set(HEADERS
     include/ElevationView3D.h
     include/LandingPage.h
     include/debug_helper.h
+    include/build_info.h
+    include/logging.h
     third_party/qcustomplot.h
 )
 

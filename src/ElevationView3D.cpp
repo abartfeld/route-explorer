@@ -1,4 +1,5 @@
 #include "ElevationView3D.h"
+#include "logging.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -250,137 +251,303 @@ void ElevationView3D::setupCamera()
 
 void ElevationView3D::setTrackData(const std::vector<TrackPoint>& points)
 {
-    qDebug() << "ElevationView3D::setTrackData - Starting with" << points.size() << "points";
+    QElapsedTimer totalTimer;
+    totalTimer.start();
+    logInfo("ElevationView3D", QString("Starting 3D track data processing with %1 points").arg(points.size()));
     
     if (points.empty()) {
-        qDebug() << "ElevationView3D::setTrackData - No points provided, returning";
+        logWarning("ElevationView3D", "No points provided, returning");
+        return;
+    }
+    
+    // Use a guard flag to prevent reentrancy issues
+    static bool isUpdating = false;
+    if (isUpdating) {
+        logWarning("ElevationView3D", "Already updating, ignoring recursive call");
+        return;
+    }
+    
+    // Set the guard flag
+    isUpdating = true;
+    
+    // Use a single shot timer to defer processing and keep UI responsive
+    if (points.size() > 1000) {
+        logInfo("ElevationView3D", "Large dataset detected, deferring 3D processing");
+        QTimer::singleShot(100, this, [this, points]() {
+            this->processTrackDataDeferred(points);
+        });
+        isUpdating = false;
         return;
     }
     
     try {
         // Clear existing track data first to prevent access to invalid memory
-        qDebug() << "ElevationView3D::setTrackData - Clearing track positions";
+        logDebug("ElevationView3D", "Clearing track positions");
         m_trackPositions.clear();
         
         // Store original track points
-        qDebug() << "ElevationView3D::setTrackData - Storing track points";
+        logDebug("ElevationView3D", "Storing track points");
         m_trackPoints = points;
         
-        // CRITICAL FIX: Create a QueuedConnection to delete the entities
-        // This avoids the deadlock in QCoreApplicationPrivate::lockThreadPostEventList
-        
-        // Safely store entities to be deleted after current event processing completes
-        QList<Qt3DCore::QEntity*> entitiesForDeletion;
-        
-        qDebug() << "ElevationView3D::setTrackData - Safely cleaning up existing terrain entity";
-        if (m_terrainEntity) {
-            entitiesForDeletion.append(m_terrainEntity);
-            m_terrainEntity = nullptr;
-        }
-        
-        qDebug() << "ElevationView3D::setTrackData - Safely cleaning up existing route entity";
-        if (m_routeEntity) {
-            entitiesForDeletion.append(m_routeEntity);
-            m_routeEntity = nullptr;
-        }
-        
-        qDebug() << "ElevationView3D::setTrackData - Safely cleaning up existing marker entity";
-        if (m_markerEntity) {
-            entitiesForDeletion.append(m_markerEntity);
-            m_markerEntity = nullptr;
-        }
-        
-        // Schedule entities for deletion using a delayed invocation of deleteLater()
-        for (Qt3DCore::QEntity* entity : entitiesForDeletion) {
-            // Use a queued connection to schedule deletion after this event loop iteration completes
-            QMetaObject::invokeMethod(entity, "deleteLater", Qt::QueuedConnection);
-        }
+        // Safely clean up existing entities
+        safelyCleanupEntities();
         
         // Ensure we have a valid root entity
-        qDebug() << "ElevationView3D::setTrackData - Checking root entity";
-        if (!m_rootEntity) {
-            qDebug() << "ElevationView3D::setTrackData - Creating new root entity";
+        logDebug("ElevationView3D", "Checking root entity");
+        if (!m_rootEntity || m_rootEntity->parent() == nullptr) {
+            logDebug("ElevationView3D", "Creating new root entity");
             m_rootEntity = new Qt3DCore::QEntity();
-            m_3dWindow->setRootEntity(m_rootEntity);
+            if (m_3dWindow) {
+                m_3dWindow->setRootEntity(m_rootEntity);
+            } else {
+                logWarning("ElevationView3D", "No 3D window available");
+                isUpdating = false; // Reset guard flag
+                return;
+            }
         }
         
-        // Convert track points to 3D positions - add more safeguards to prevent memory issues
-        qDebug() << "ElevationView3D::setTrackData - Converting" << points.size() << "track points to 3D positions";
-        m_trackPositions.reserve(points.size()); // Pre-allocate for performance
-        
-        // Sample a subset of points if there are too many to avoid memory overload
-        const size_t MAX_POINTS_TO_RENDER = 5000; // Limit for very large datasets
-        size_t sampleEvery = (points.size() > MAX_POINTS_TO_RENDER) ? 
-            points.size() / MAX_POINTS_TO_RENDER + 1 : 1;
-            
-        if (sampleEvery > 1) {
-            qDebug() << "ElevationView3D::setTrackData - Sampling every" << sampleEvery 
-                     << "points due to large dataset";
-        }
-        
-        for (size_t i = 0; i < points.size(); i += sampleEvery) {
-            m_trackPositions.push_back(trackPointToVector3D(points[i]));
-        }
-        
-        // Always include the last point
-        if (!points.empty() && m_trackPositions.empty()) {
-            m_trackPositions.push_back(trackPointToVector3D(points.back()));
-        }
-        else if (!points.empty() && m_trackPositions.back() != trackPointToVector3D(points.back())) {
-            m_trackPositions.push_back(trackPointToVector3D(points.back()));
-        }
-        
-        qDebug() << "ElevationView3D::setTrackData - Processed" << m_trackPositions.size() 
-                 << "3D positions";
+        // Convert track points to 3D positions
+        convertTrackPointsTo3D(points);
         
         // Create new terrain and route entities
-        qDebug() << "ElevationView3D::setTrackData - Creating terrain";
-        createTerrain();
-        qDebug() << "ElevationView3D::setTrackData - Creating route";
-        createRoute();
-        qDebug() << "ElevationView3D::setTrackData - Creating marker";
-        createMarker();
+        createSceneEntities();
         
         // Reset camera to view the entire route
-        qDebug() << "ElevationView3D::setTrackData - Resetting camera position";
+        resetCameraView();
         
-        // Find center of route
-        QVector3D routeMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-        QVector3D routeMax(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
-        
-        for (const auto& pos : m_trackPositions) {
-            routeMin.setX(std::min(routeMin.x(), pos.x()));
-            routeMin.setY(std::min(routeMin.y(), pos.y()));
-            routeMin.setZ(std::min(routeMin.z(), pos.z()));
-            
-            routeMax.setX(std::max(routeMax.x(), pos.x()));
-            routeMax.setY(std::max(routeMax.y(), pos.y()));
-            routeMax.setZ(std::max(routeMax.z(), pos.z()));
-        }
-        
-        QVector3D routeCenter = (routeMin + routeMax) * 0.5f;
-        float routeSize = (routeMax - routeMin).length();
-        
-        // Position camera to view the entire route
-        m_camera->setPosition(routeCenter + QVector3D(routeSize * 0.5f, routeSize * 0.5f, routeSize * 0.5f));
-        m_camera->setViewCenter(routeCenter);
-        
-        // Reset animation parameters
-        m_flythroughProgress = 0.0f;
-        m_currentPositionIndex = 0;
-        
-        // Update marker to first position if it exists
-        if (m_markerEntity && !m_trackPositions.empty()) {
-            qDebug() << "ElevationView3D::setTrackData - Updating marker position";
-            updateMarkerPosition(0);
-        }
-        
-        qDebug() << "ElevationView3D::setTrackData - Completed successfully";
+        logDebug("ElevationView3D", "Completed successfully");
     } catch (const std::exception& e) {
-        qCritical() << "ElevationView3D::setTrackData - Exception:" << e.what();
+        logCritical("ElevationView3D", QString("Exception during processing: %1").arg(e.what()));
     } catch (...) {
-        qCritical() << "ElevationView3D::setTrackData - Unknown exception occurred";
+        logCritical("ElevationView3D", "Unknown exception during processing");
     }
+    
+    // Reset the guard flag
+    isUpdating = false;
+    
+    // The guard flag will be automatically reset when this function exits
+}
+
+// New method to defer processing of large track data sets to keep UI responsive
+void ElevationView3D::processTrackDataDeferred(const std::vector<TrackPoint>& points)
+{
+    QElapsedTimer totalTimer;
+    totalTimer.start();
+    static bool isUpdating = false;
+    
+    if (isUpdating) {
+        logWarning("ElevationView3D", "Already processing in deferred mode, skipping");
+        return;
+    }
+    
+    isUpdating = true;
+    
+    try {
+        // Clear existing track data first to prevent access to invalid memory
+        logDebug("ElevationView3D", "Clearing track positions");
+        m_trackPositions.clear();
+        QCoreApplication::processEvents();
+        
+        // Store original track points
+        logDebug("ElevationView3D", "Storing track points");
+        m_trackPoints = points;
+        QCoreApplication::processEvents();
+        
+        // Safely clean up existing entities
+        safelyCleanupEntities();
+        QCoreApplication::processEvents();
+        
+        // Ensure we have a valid root entity
+        logDebug("ElevationView3D", "Checking root entity");
+        if (!m_rootEntity || m_rootEntity->parent() == nullptr) {
+            logDebug("ElevationView3D", "Creating new root entity");
+            m_rootEntity = new Qt3DCore::QEntity();
+            if (m_3dWindow) {
+                m_3dWindow->setRootEntity(m_rootEntity);
+            } else {
+                logWarning("ElevationView3D", "No 3D window available");
+                isUpdating = false; // Reset guard flag
+                return;
+            }
+        }
+        QCoreApplication::processEvents();
+        
+        // Convert track points to 3D positions - this can be intensive
+        QElapsedTimer timer;
+        timer.start();
+        logInfo("ElevationView3D", "Converting track points to 3D positions...");
+        convertTrackPointsTo3D(points);
+        logInfo("ElevationView3D", QString("Conversion completed in %1 ms").arg(timer.elapsed()));
+        QCoreApplication::processEvents();
+        
+        // Create new terrain and route entities in stages
+        timer.restart();
+        logInfo("ElevationView3D", "Creating scene entities...");
+        createSceneEntities();
+        logInfo("ElevationView3D", QString("Scene creation completed in %1 ms").arg(timer.elapsed()));
+        QCoreApplication::processEvents();
+        
+        // Reset camera to view the entire route
+        timer.restart();
+        logInfo("ElevationView3D", "Resetting camera view...");
+        resetCameraView();
+        logInfo("ElevationView3D", QString("Camera reset completed in %1 ms").arg(timer.elapsed()));
+        
+        logInfo("ElevationView3D", QString("Total 3D processing completed in %1 ms").arg(totalTimer.elapsed()));
+    } catch (const std::exception& e) {
+        logCritical("ElevationView3D", QString("Exception during deferred processing: %1").arg(e.what()));
+    } catch (...) {
+        logCritical("ElevationView3D", "Unknown exception during deferred processing");
+    }
+    
+    // Reset the guard flag
+    isUpdating = false;
+}
+
+void ElevationView3D::safelyCleanupEntities()
+{
+    qDebug() << "ElevationView3D::safelyCleanupEntities - Starting cleanup";
+    
+    // Use standard approach without QPointer
+    QList<Qt3DCore::QEntity*> entitiesToDelete;
+    
+    if (m_terrainEntity) {
+        entitiesToDelete.append(m_terrainEntity);
+        m_terrainEntity = nullptr;
+    }
+    
+    if (m_routeEntity) {
+        entitiesToDelete.append(m_routeEntity);
+        m_routeEntity = nullptr;
+    }
+    
+    if (m_markerEntity) {
+        entitiesToDelete.append(m_markerEntity);
+        m_markerEntity = nullptr;
+    }
+    
+    // Process deletions more safely to avoid reentrancy and segfault issues
+    if (!entitiesToDelete.isEmpty()) {
+        // Critical fix: Create a heap-allocated copy of the entity list
+        // This ensures the entity list survives beyond this method's scope
+        auto* deleteList = new QList<Qt3DCore::QEntity*>(entitiesToDelete);
+        
+        // Use a QObject to own the lambda, ensuring it's deleted after execution
+        QObject* cleanupHandler = new QObject(this);
+        // Use the C++11 lambda syntax that captures the deleteList by value
+        QTimer::singleShot(0, cleanupHandler, [cleanupHandler, deleteList]() {
+            // Process each entity in our heap-allocated list
+            for (Qt3DCore::QEntity* entity : *deleteList) {
+                if (entity) {
+                    // Just schedule deletion without modifying the entity
+                    entity->deleteLater();
+                }
+            }
+            // Clean up our heap-allocated list and the cleanup handler
+            delete deleteList;
+            cleanupHandler->deleteLater();
+        });
+    }
+    
+    qDebug() << "ElevationView3D::safelyCleanupEntities - Scheduled" << entitiesToDelete.size() 
+             << "entities for deletion";
+}
+
+void ElevationView3D::convertTrackPointsTo3D(const std::vector<TrackPoint>& points)
+{
+    qDebug() << "ElevationView3D::convertTrackPointsTo3D - Converting" << points.size() << "points";
+    
+    // Pre-allocate memory to avoid reallocations
+    m_trackPositions.reserve(std::min(points.size(), size_t(10000)));
+    
+    // Sample a subset of points if there are too many 
+    const size_t MAX_POINTS_TO_RENDER = 5000; // Limit for very large datasets
+    size_t sampleEvery = (points.size() > MAX_POINTS_TO_RENDER) ? 
+        points.size() / MAX_POINTS_TO_RENDER + 1 : 1;
+        
+    if (sampleEvery > 1) {
+        qDebug() << "ElevationView3D::convertTrackPointsTo3D - Sampling every" << sampleEvery 
+                 << "points due to large dataset";
+    }
+    
+    // Convert points to 3D positions
+    for (size_t i = 0; i < points.size(); i += sampleEvery) {
+        m_trackPositions.push_back(trackPointToVector3D(points[i]));
+    }
+    
+    // Always ensure the last point is included for proper route termination
+    if (!points.empty()) {
+        QVector3D lastPoint = trackPointToVector3D(points.back());
+        if (m_trackPositions.empty() || m_trackPositions.back() != lastPoint) {
+            m_trackPositions.push_back(lastPoint);
+        }
+    }
+    
+    qDebug() << "ElevationView3D::convertTrackPointsTo3D - Processed" << m_trackPositions.size() 
+             << "3D positions";
+}
+
+void ElevationView3D::createSceneEntities()
+{
+    // Only proceed if we have valid track positions
+    if (m_trackPositions.empty()) {
+        qWarning() << "ElevationView3D::createSceneEntities - No track positions available";
+        return;
+    }
+    
+    // Create terrain mesh
+    qDebug() << "ElevationView3D::createSceneEntities - Creating terrain";
+    createTerrain();
+    
+    // Create route visualization
+    qDebug() << "ElevationView3D::createSceneEntities - Creating route";
+    createRoute();
+    
+    // Create position marker
+    qDebug() << "ElevationView3D::createSceneEntities - Creating marker";
+    createMarker();
+}
+
+void ElevationView3D::resetCameraView()
+{
+    if (m_trackPositions.empty() || !m_camera) {
+        return;
+    }
+    
+    qDebug() << "ElevationView3D::resetCameraView - Resetting camera position";
+    
+    // Find bounding box of the route
+    QVector3D routeMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+    QVector3D routeMax(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
+    
+    for (const auto& pos : m_trackPositions) {
+        routeMin.setX(std::min(routeMin.x(), pos.x()));
+        routeMin.setY(std::min(routeMin.y(), pos.y()));
+        routeMin.setZ(std::min(routeMin.z(), pos.z()));
+        
+        routeMax.setX(std::max(routeMax.x(), pos.x()));
+        routeMax.setY(std::max(routeMax.y(), pos.y()));
+        routeMax.setZ(std::max(routeMax.z(), pos.z()));
+    }
+    
+    // Calculate center and size of the route
+    QVector3D routeCenter = (routeMin + routeMax) * 0.5f;
+    float routeSize = (routeMax - routeMin).length();
+    
+    // Position camera to view the entire route
+    m_camera->setPosition(routeCenter + QVector3D(routeSize * 0.5f, routeSize * 0.5f, routeSize * 0.5f));
+    m_camera->setViewCenter(routeCenter);
+    
+    // Reset animation parameters
+    m_flythroughProgress = 0.0f;
+    m_currentPositionIndex = 0;
+    
+    // Update marker to first position if it exists
+    if (m_markerEntity && !m_trackPositions.empty()) {
+        updateMarkerPosition(0);
+    }
+        
+    qDebug() << "ElevationView3D::setTrackData - Completed successfully";
 }
 
 void ElevationView3D::createTerrain()

@@ -1,4 +1,6 @@
 #include "TrackStatsWidget.h"
+#include "logging.h"
+
 #include <QPushButton>
 #include <QScrollArea>
 #include <deque>
@@ -448,30 +450,63 @@ void TrackStatsWidget::toggleUnits() {
 }
 
 void TrackStatsWidget::analyzeSegments(const GPXParser& parser) {
+    QElapsedTimer timer;
+    timer.start();
+    logInfo("TrackStatsWidget", QString("Starting segment analysis with %1 points").arg(parser.getPoints().size()));
+    
     const std::vector<TrackPoint>& points = parser.getPoints();
     if (points.size() < 2) {
         m_segments.clear();
+        logInfo("TrackStatsWidget", "Too few points for segment analysis, returning");
         return;
     }
     
     m_segments.clear();
     
+    // Process in chunks to avoid freezing the UI
+    QCoreApplication::processEvents();
+    logDebug("TrackStatsWidget", "Calculating smoothed gradients...");
     std::vector<double> smoothGradients = calculateSmoothedGradients(points);
+    logDebug("TrackStatsWidget", QString("Smoothed gradients calculated in %1 ms").arg(timer.elapsed()));
     
+    QCoreApplication::processEvents();
+    timer.restart();
+    logDebug("TrackStatsWidget", "Identifying segment boundaries...");
     std::vector<size_t> segmentBoundaries = identifySegmentBoundaries(points, smoothGradients);
+    logDebug("TrackStatsWidget", QString("Found %1 segment boundaries in %2 ms").arg(segmentBoundaries.size()).arg(timer.elapsed()));
     
+    QCoreApplication::processEvents();
+    timer.restart();
+    logDebug("TrackStatsWidget", "Creating raw segments...");
     std::vector<TrackSegment> rawSegments = createRawSegments(points, smoothGradients, segmentBoundaries);
+    logDebug("TrackStatsWidget", QString("Created %1 raw segments in %2 ms").arg(rawSegments.size()).arg(timer.elapsed()));
     
+    QCoreApplication::processEvents();
+    timer.restart();
+    logDebug("TrackStatsWidget", "Optimizing segments...");
     m_segments = optimizeSegments(rawSegments, points);
+    logInfo("TrackStatsWidget", QString("Finished analyzing %1 segments in %2 ms").arg(m_segments.size()).arg(timer.elapsed()));
 }
 
 std::vector<double> TrackStatsWidget::calculateSmoothedGradients(const std::vector<TrackPoint>& points) {
-    const int WINDOW_SIZE = 15; 
+    QElapsedTimer timer;
+    timer.start();
+    logDebug("TrackStatsWidget", QString("Smoothing gradients for %1 points").arg(points.size()));
+    
+    // Skip expensive smoothing for very large datasets
+    const int MAX_POINTS_FULL_SMOOTHING = 8000;
+    const int WINDOW_SIZE = points.size() > MAX_POINTS_FULL_SMOOTHING ? 7 : 15; 
     
     // Use the pre-calculated gradients from GPXParser as a starting point
     std::vector<double> gradients(points.size());
     for (size_t i = 0; i < points.size(); i++) {
         gradients[i] = points[i].gradient;
+        
+        // Process events periodically for very large datasets
+        if (points.size() > 10000 && i % 5000 == 0) {
+            QCoreApplication::processEvents();
+            logDebug("TrackStatsWidget", QString("Gradient initialization: %1/%2 points processed").arg(i).arg(points.size()));
+        }
     }
     
     // Apply segment-aware smoothing to avoid blurring segment boundaries

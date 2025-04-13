@@ -1,4 +1,5 @@
 #include "LandingPage.h"
+#include "build_info.h"
 #include <QApplication>
 #include <QScreen>
 #include <QRandomGenerator>
@@ -22,10 +23,23 @@ LandingPage::LandingPage(QWidget *parent)
     updateRecentFiles();
     loadSampleRoutes();
     
-    // Show a welcome message with current date
+    // Show a welcome message with current date and build timestamp
     QString welcomeMessage = "Welcome to Route Explorer! Today is " + 
-                            QDate::currentDate().toString("dddd, MMMM d, yyyy");
+                            QDate::currentDate().toString("dddd, MMMM d, yyyy") +
+                            " | Build: " + BUILD_TIMESTAMP;
     statusBar()->showMessage(welcomeMessage, 5000);
+    
+    // Add a persistent build timestamp label at the bottom of the page
+    QLabel* buildLabel = new QLabel("Build: " + BUILD_TIMESTAMP, this);
+    buildLabel->setStyleSheet("font-size: 10px; color: #757575;");
+    buildLabel->setAlignment(Qt::AlignRight | Qt::AlignBottom);
+    buildLabel->setContentsMargins(0, 0, 10, 5);
+    
+    // Add the build label to the main layout at the bottom
+    QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(layout());
+    if (mainLayout) {
+        mainLayout->addWidget(buildLabel);
+    }
 }
 
 void LandingPage::setupStyles() {

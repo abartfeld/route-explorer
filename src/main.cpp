@@ -1,11 +1,17 @@
 #include "MainWindow.h"
 #include "debug_helper.h"
+#include "build_info.h"
+#include "logging.h"
 #include <QApplication>
 #include <QFile>
 #include <QDir>
 #include <QStandardPaths>
 #include <QDebug>
 #include <QTimer>
+#include <QDateTime>
+
+// Define build timestamp for version tracking (implementation of extern variable)
+const QString BUILD_TIMESTAMP = __DATE__ " " __TIME__;
 
 /**
  * Initialize application-specific folders and settings
@@ -39,6 +45,13 @@ int main(int argc, char *argv[])
     // Install signal handlers for better crash debug info
     DebugHelper::installSignalHandlers();
     
+    // Use high DPI scaling for better display
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
+    
+    // Set rendering to prefer performance over quality
+    QCoreApplication::setAttribute(Qt::AA_UseSoftwareOpenGL, false);
+    
     QApplication app(argc, argv);
     
     // Set application metadata
@@ -52,7 +65,9 @@ int main(int argc, char *argv[])
     // Initialize application directories and settings
     initializeApp();
     
-    qDebug() << "Working directory:" << QDir::currentPath();
+    logInfo("Main", QString("Starting Route Explorer v%1").arg(QCoreApplication::applicationVersion()));
+    logInfo("Main", QString("Working directory: %1").arg(QDir::currentPath()));
+    logInfo("Main", QString("Build timestamp: %1").arg(BUILD_TIMESTAMP));
     
     // Create and show the main window
     MainWindow mainWindow;

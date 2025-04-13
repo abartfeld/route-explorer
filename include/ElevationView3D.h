@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include <QLabel>
+#include <QPointer>
 #include <Qt3DCore/QEntity>
 #include <Qt3DRender/QCamera>
 #include <Qt3DRender/QMesh>
@@ -37,6 +38,12 @@ public:
      * @param points Track points to visualize
      */
     void setTrackData(const std::vector<TrackPoint>& points);
+    
+    /**
+     * @brief Process track data in a deferred manner to prevent UI freezing
+     * @param points Track points to visualize
+     */
+    void processTrackDataDeferred(const std::vector<TrackPoint>& points);
     
     /**
      * @brief Update the current position marker
@@ -129,17 +136,26 @@ private:
     
     // Helper methods
     void setupUI();
+    void setupCamera();
+    
+    // Memory-safe entity management methods
+    void safelyCleanupEntities();
+    void convertTrackPointsTo3D(const std::vector<TrackPoint>& points);
+    void createSceneEntities();
+    void resetCameraView();
+    
+    // Entity creation methods
     void createTerrain();
     void createRoute();
     void createMarker();
-    void setupCamera();
     Qt3DCore::QEntity* createTerrainMesh(const std::vector<TrackPoint>& points);
-    Qt3DCore::QEntity* createRoutePath(const std::vector<TrackPoint>& points);
     Qt3DCore::QEntity* createOptimizedRoutePath(const std::vector<TrackPoint>& points);
     void createBatchedSegments(Qt3DCore::QEntity* parentEntity, const std::vector<TrackPoint>& points,
                              size_t startIdx, size_t endIdx);
     void simplifyRoute(const std::vector<TrackPoint>& input, std::vector<TrackPoint>& output, int maxPoints);
     Qt3DCore::QEntity* createPositionMarker();
+    
+    // Utility methods
     void updateMarkerPosition(size_t pointIndex);
     QVector3D trackPointToVector3D(const TrackPoint& point, bool scaleElevation = true);
     void setCameraPosition(const QVector3D& position, const QVector3D& target);
