@@ -19,6 +19,7 @@
 #include <vector>
 #include <memory>
 #include "GpxParser.h"
+#include "TerrainService.h"
 
 /**
  * @brief Widget for 3D visualization of elevation profiles
@@ -95,8 +96,12 @@ private slots:
     void updateFlythrough();
     void updateAnimationSpeed();
     void updateFPS();
+    void onTerrainDataReady(const TerrainData& data);
     
 private:
+    // Services
+    TerrainService* m_terrainService;
+
     // Qt3D setup
     Qt3DExtras::Qt3DWindow* m_3dWindow;
     Qt3DCore::QEntity* m_rootEntity;
@@ -148,7 +153,7 @@ private:
     void createTerrain();
     void createRoute();
     void createMarker();
-    Qt3DCore::QEntity* createTerrainMesh(const std::vector<TrackPoint>& points);
+    Qt3DCore::QEntity* createTerrainMesh(const TerrainData& terrainData);
     Qt3DCore::QEntity* createOptimizedRoutePath(const std::vector<TrackPoint>& points);
     void createBatchedSegments(Qt3DCore::QEntity* parentEntity, const std::vector<TrackPoint>& points,
                              size_t startIdx, size_t endIdx);
