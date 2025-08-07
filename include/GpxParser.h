@@ -111,6 +111,13 @@ private:
      * @return True if point was successfully read
      */
     bool processTrackPoint(QXmlStreamReader& xml);
+
+    /**
+     * @brief Main parsing logic for different sources
+     * @param xml XML stream reader to parse from
+     * @return True if parsing successful, false otherwise
+     */
+    bool parseXmlStream(QXmlStreamReader& xml);
     
     /**
      * @brief Calculate distances between consecutive points

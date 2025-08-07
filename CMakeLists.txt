@@ -58,8 +58,7 @@ include_directories(
 )
 
 # Source files - ADD NEW FILES HERE
-set(SOURCES
-    src/main.cpp
+set(LIB_SOURCES
     src/MainWindow.cpp
     src/MapWidget.cpp
     src/GpxParser.cpp
@@ -88,25 +87,36 @@ set(RESOURCES
     resources/resources.qrc
 )
 
-# Create executable
-add_executable(gpx_viewer
-    ${SOURCES}
-    ${HEADERS}
-    ${RESOURCES}
+# Create library
+add_library(gpx_viewer_lib ${LIB_SOURCES} ${HEADERS} ${RESOURCES})
+
+# Add coverage flags for debug builds
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(gpx_viewer_lib PRIVATE --coverage)
+        target_link_libraries(gpx_viewer_lib PRIVATE gcov)
+    endif()
+endif()
+
+# Link library to Qt
+target_link_libraries(gpx_viewer_lib
+    PUBLIC
+        Qt5::Core
+        Qt5::Widgets
+        Qt5::Network
+        Qt5::Positioning
+        Qt5::PrintSupport
+        Qt5::3DCore
+        Qt5::3DRender
+        Qt5::3DExtras
+        Qt5::Svg
 )
 
-# Link libraries
-target_link_libraries(gpx_viewer
-    Qt5::Core
-    Qt5::Widgets
-    Qt5::Network
-    Qt5::Positioning
-    Qt5::PrintSupport
-    Qt5::3DCore
-    Qt5::3DRender
-    Qt5::3DExtras
-    Qt5::Svg
-)
+# Create executable
+add_executable(gpx_viewer src/main.cpp)
+
+# Link executable to library
+target_link_libraries(gpx_viewer gpx_viewer_lib)
 
 # Install rules
 install(TARGETS gpx_viewer 
@@ -114,6 +124,25 @@ install(TARGETS gpx_viewer
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
+
+# --- Testing Framework Setup ---
+# Enable testing
+enable_testing()
+
+# Fetch Google Test
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG    release-1.12.1
+)
+
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# Add tests subdirectory
+add_subdirectory(tests)
 
 # Set compiler warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

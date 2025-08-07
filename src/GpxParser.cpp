@@ -23,75 +23,26 @@ bool GPXParser::parse(const QString& filename) {
         qDebug() << "Error: Cannot open file" << filename;
         return false;
     }
-
-    // Clear existing data
-    clear();
-    
     QXmlStreamReader xml(&file);
-    
-    // Track segment properties
-    double totalDistance = 0.0;
-    QGeoCoordinate lastCoord;
-    bool firstPoint = true;
-    
-    // Parse the XML
-    while (!xml.atEnd() && !xml.hasError()) {
-        xml.readNext();
-        
-        if (xml.isStartElement() && xml.name() == QLatin1String("trkpt")) {
-            if (processTrackPoint(xml)) {
-                // Calculate cumulative distance
-                if (!firstPoint) {
-                    double segmentDistance = lastCoord.distanceTo(m_points.back().coord);
-                    totalDistance += segmentDistance;
-                    m_points.back().distance = totalDistance;
-                } else {
-                    m_points.back().distance = 0.0;
-                    firstPoint = false;
-                }
-                
-                // Track min/max elevation
-                double elevation = m_points.back().elevation;
-                if (m_points.size() == 1 || elevation < m_minElevation) {
-                    m_minElevation = elevation;
-                }
-                if (m_points.size() == 1 || elevation > m_maxElevation) {
-                    m_maxElevation = elevation;
-                }
-                
-                lastCoord = m_points.back().coord;
-            }
-        }
-    }
-    
-    if (xml.hasError()) {
-        qDebug() << "XML error:" << xml.errorString();
-        clear();
-        return false;
-    }
-
-    // After parsing all points, calculate gradients
-    calculateGradients();
-    
-    file.close();
-    return !m_points.empty();
+    return parseXmlStream(xml);
 }
 
 bool GPXParser::parseData(const QString& data) {
-    // Clear existing data
-    clear();
-    
     QXmlStreamReader xml(data);
-    
-    // Track segment properties
+    return parseXmlStream(xml);
+}
+
+// Centralized parsing logic
+bool GPXParser::parseXmlStream(QXmlStreamReader& xml) {
+    clear();
+
     double totalDistance = 0.0;
     QGeoCoordinate lastCoord;
     bool firstPoint = true;
-    
-    // Parse the XML
+
     while (!xml.atEnd() && !xml.hasError()) {
         xml.readNext();
-        
+
         if (xml.isStartElement() && xml.name() == QLatin1String("trkpt")) {
             if (processTrackPoint(xml)) {
                 // Calculate cumulative distance
@@ -103,22 +54,28 @@ bool GPXParser::parseData(const QString& data) {
                     m_points.back().distance = 0.0;
                     firstPoint = false;
                 }
-                
+
+                // Track min/max elevation
+                double elevation = m_points.back().elevation;
+                if (m_points.size() == 1) {
+                    m_minElevation = m_maxElevation = elevation;
+                } else {
+                    if (elevation < m_minElevation) m_minElevation = elevation;
+                    if (elevation > m_maxElevation) m_maxElevation = elevation;
+                }
+
                 lastCoord = m_points.back().coord;
             }
         }
     }
-    
+
     if (xml.hasError()) {
         qDebug() << "XML error:" << xml.errorString();
         clear();
         return false;
     }
 
-    // After parsing all points, calculate gradients
-    
     calculateGradients();
-    
     return !m_points.empty();
 }
 
