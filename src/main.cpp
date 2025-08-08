@@ -10,9 +10,6 @@
 #include <QTimer>
 #include <QDateTime>
 
-// Define build timestamp for version tracking (implementation of extern variable)
-const QString BUILD_TIMESTAMP = __DATE__ " " __TIME__;
-
 /**
  * Initialize application-specific folders and settings
  */
