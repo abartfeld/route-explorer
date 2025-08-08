@@ -1,5 +1,7 @@
 #include "RouteRenderer.h"
+
 #include <cmath>
+#include "logging.h"
 
 #include <Qt3DRender/QGeometry>
 #include <Qt3DRender/QAttribute>
@@ -39,9 +41,6 @@ void RouteRenderer::generateMesh()
     QByteArray indexBufferData;
 
     const auto& positions = m_routeData->getPositions();
-    const int numPoints = positions.size();
-    const int numVertices = numPoints * ROUTE_SEGMENT_SIDES;
-    const int numIndices = (numPoints - 1) * ROUTE_SEGMENT_SIDES * 2 * 3; // (num segments) * (sides) * (2 triangles per side) * (3 vertices per triangle)
     const size_t numPoints = positions.size();
     const size_t numVertices = numPoints * ROUTE_SEGMENT_SIDES;
     const size_t numIndices = (numPoints > 1) ? (numPoints - 1) * ROUTE_SEGMENT_SIDES * 2 * 3 : 0; // (num segments) * (sides) * (2 triangles per side) * (3 vertices per triangle)

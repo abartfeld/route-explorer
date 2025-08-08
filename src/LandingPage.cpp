@@ -359,11 +359,8 @@ void LandingPage::loadSampleRoutes() {
     // Check for sample files in the application's samples directory
     QDir samplesDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/samples");
     
-    // If the samples directory doesn't exist or is empty, use a built-in example
+    // If the samples directory doesn't exist or is empty, do not add any built-in example
     if (!samplesDir.exists() || samplesDir.entryList(QDir::Files).isEmpty()) {
-        QListWidgetItem* item = new QListWidgetItem(QIcon(":/icons/map-marker.svg"), "Example Route");
-        item->setData(Qt::UserRole, ":/samples/example_route.gpx");
-        m_samplesListWidget->addItem(item);
         return;
     }
     

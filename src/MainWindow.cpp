@@ -773,22 +773,11 @@ void MainWindow::show3DView() {
     // First show the main view
     showMainView();
     
-    // If there's no data loaded, offer to load a sample route
+    // If there's no data loaded, show a message and return to landing page
     if (m_gpxParser.getPoints().empty()) {
-        QMessageBox::StandardButton reply = QMessageBox::question(this, 
-            "No Route Loaded", 
-            "No route is currently loaded. Would you like to load a sample route for viewing in 3D?",
-            QMessageBox::Yes | QMessageBox::No);
-            
-        if (reply == QMessageBox::Yes) {
-            // Try to load the example route
-            QString samplePath = ":/samples/example_route.gpx";
-            openFile(samplePath);
-        } else {
-            // Return to landing page if user doesn't want to load a sample
-            showLandingPage();
-            return;
-        }
+        QMessageBox::information(this, "No Route Loaded", "No route is currently loaded. Please open a GPX file to view in 3D.");
+        showLandingPage();
+        return;
     }
     
     // Switch to the 3D tab (index 1)

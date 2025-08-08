@@ -10,6 +10,5 @@
         <file>fonts/Roboto-Regular.ttf</file>
         <file>fonts/Roboto-Bold.ttf</file>
         <file>fonts/Roboto-Light.ttf</file>
-        <file>samples/example_route.gpx</file>
     </qresource>
 </RCC>

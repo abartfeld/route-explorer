@@ -7,6 +7,7 @@ namespace {
     constexpr int ANIMATION_INTERVAL_MS = 16; // ~60 FPS
     constexpr float DEFAULT_SPEED = 0.001f; // Progress per update
     constexpr float CAMERA_HEIGHT_OFFSET = 1.8f; // meters above track
+    constexpr float EPSILON = 1e-5f;
 }
 
 FlythroughController::FlythroughController(RouteData* routeData, Qt3DRender::QCamera* camera, QObject* parent)
