@@ -1,5 +1,6 @@
 #include "ElevationView3D.h"
 #include "logging.h"
+#include "TerrainService.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -9,6 +10,7 @@
 #include <QStyle>
 #include <QDebug>
 #include <Qt3DExtras/QDiffuseSpecularMaterial>
+#include <Qt3DRender/QTexture>
 #include <Qt3DExtras/QPhongAlphaMaterial>
 #include <Qt3DExtras/QOrbitCameraController>
 #include <Qt3DExtras/QFirstPersonCameraController>
@@ -66,6 +68,13 @@ ElevationView3D::ElevationView3D(QWidget* parent)
 {
     setupUI();
     
+    // Initialize terrain service
+    m_terrainService = new TerrainService(this);
+    connect(m_terrainService, &TerrainService::terrainDataReady, this, &ElevationView3D::onTerrainDataReady);
+    connect(m_terrainService, &TerrainService::error, [](const QString& errorMessage) {
+        logWarning("TerrainService", errorMessage);
+    });
+
     // Initialize animation timer
     m_flythroughTimer = new QTimer(this);
     m_flythroughTimer->setInterval(DEFAULT_FLYTHROUGH_INTERVAL);
@@ -312,6 +321,24 @@ void ElevationView3D::setTrackData(const std::vector<TrackPoint>& points)
         // Create new terrain and route entities
         createSceneEntities();
         
+        // Fetch terrain data
+        if (!m_trackPoints.empty()) {
+            double minLat = m_trackPoints[0].coord.latitude();
+            double maxLat = m_trackPoints[0].coord.latitude();
+            double minLon = m_trackPoints[0].coord.longitude();
+            double maxLon = m_trackPoints[0].coord.longitude();
+            for (const auto& point : m_trackPoints) {
+                minLat = std::min(minLat, point.coord.latitude());
+                maxLat = std::max(maxLat, point.coord.latitude());
+                minLon = std::min(minLon, point.coord.longitude());
+                maxLon = std::max(maxLon, point.coord.longitude());
+            }
+            // Add a small buffer around the track
+            double latBuffer = (maxLat - minLat) * 0.1;
+            double lonBuffer = (maxLon - minLon) * 0.1;
+            m_terrainService->fetchTerrainData(maxLat + latBuffer, minLat - latBuffer, minLon - lonBuffer, maxLon + lonBuffer, 100, 100);
+        }
+
         // Reset camera to view the entire route
         resetCameraView();
         
@@ -552,33 +579,10 @@ void ElevationView3D::resetCameraView()
 
 void ElevationView3D::createTerrain()
 {
-    qDebug() << "ElevationView3D::createTerrain - Starting";
-    
-    // Ensure we're not creating terrain with invalid data
-    if (m_trackPoints.empty()) {
-        qWarning() << "ElevationView3D::createTerrain - No track points available";
-        return;
-    }
-    
-    try {
-        m_terrainEntity = createTerrainMesh(m_trackPoints);
-        if (m_terrainEntity && m_rootEntity) {
-            qDebug() << "ElevationView3D::createTerrain - Setting parent to root entity";
-            m_terrainEntity->setParent(m_rootEntity);
-        } else {
-            qWarning() << "ElevationView3D::createTerrain - Failed to create terrain mesh or no root entity";
-            if (m_terrainEntity) {
-                m_terrainEntity->deleteLater();
-                m_terrainEntity = nullptr;
-            }
-        }
-    } catch (const std::exception& e) {
-        qCritical() << "ElevationView3D::createTerrain - Exception:" << e.what();
-    } catch (...) {
-        qCritical() << "ElevationView3D::createTerrain - Unknown exception";
-    }
-    
-    qDebug() << "ElevationView3D::createTerrain - Completed";
+    // This method is now effectively a placeholder.
+    // The terrain is created when the terrain data is ready in onTerrainDataReady.
+    // We could potentially create a placeholder flat terrain here while the real data loads.
+    qDebug() << "ElevationView3D::createTerrain - Deferred to onTerrainDataReady";
 }
 
 void ElevationView3D::createRoute()
@@ -648,111 +652,139 @@ void ElevationView3D::createMarker()
     qDebug() << "ElevationView3D::createMarker - Completed";
 }
 
-Qt3DCore::QEntity* ElevationView3D::createTerrainMesh(const std::vector<TrackPoint>& points)
+Qt3DCore::QEntity* ElevationView3D::createTerrainMesh(const TerrainData& terrainData)
 {
-    qDebug() << "ElevationView3D::createTerrainMesh - Starting with" << points.size() << "points";
-    
-    if (points.empty()) {
-        qWarning() << "ElevationView3D::createTerrainMesh - No points provided, returning nullptr";
+    qDebug() << "ElevationView3D::createTerrainMesh - Creating mesh from terrain data";
+
+    if (terrainData.elevationGrid.empty() || terrainData.elevationGrid[0].empty()) {
+        qWarning() << "ElevationView3D::createTerrainMesh - No elevation data provided, returning nullptr";
         return nullptr;
     }
-    
-    try {
-        // Create terrain entity
-        Qt3DCore::QEntity* terrainEntity = new Qt3DCore::QEntity();
-        
-        // For a simple example, we'll create a cuboid mesh as a base
-        Qt3DExtras::QCuboidMesh* terrainMesh = new Qt3DExtras::QCuboidMesh();
-        
-        // Find terrain dimensions
-        double minLat = points[0].coord.latitude();
-        double maxLat = points[0].coord.latitude();
-        double minLon = points[0].coord.longitude();
-        double maxLon = points[0].coord.longitude();
-        double minEle = points[0].elevation;
-        double maxEle = points[0].elevation;
-        
-        for (const auto& point : points) {
-            minLat = std::min(minLat, point.coord.latitude());
-            maxLat = std::max(maxLat, point.coord.latitude());
-            minLon = std::min(minLon, point.coord.longitude());
-            maxLon = std::max(maxLon, point.coord.longitude());
-            minEle = std::min(minEle, point.elevation);
-            maxEle = std::max(maxEle, point.elevation);
+
+    Qt3DCore::QEntity* terrainEntity = new Qt3DCore::QEntity();
+    Qt3DRender::QGeometryRenderer* meshRenderer = new Qt3DRender::QGeometryRenderer();
+    Qt3DRender::QGeometry* geometry = new Qt3DRender::QGeometry(meshRenderer);
+
+    QByteArray vertexBufferData;
+    int gridHeight = terrainData.elevationGrid.size();
+    int gridWidth = terrainData.elevationGrid[0].size();
+    vertexBufferData.resize(gridWidth * gridHeight * (3 + 3 + 2) * sizeof(float));
+    float* p = reinterpret_cast<float*>(vertexBufferData.data());
+
+    // This is a simplified conversion from lat/lon to a flat 3D space.
+    // It is not accurate for large areas but is sufficient for this visualization.
+    const double latToMeters = 111320.0;
+    const double lonToMeters = 40075000.0 * cos(terrainData.topLeft.latitude() * M_PI / 180.0) / 360.0;
+
+    double widthMeters = (terrainData.bottomRight.longitude() - terrainData.topLeft.longitude()) * lonToMeters;
+    double heightMeters = (terrainData.topLeft.latitude() - terrainData.bottomRight.latitude()) * latToMeters;
+
+
+    for (int i = 0; i < gridHeight; ++i) {
+        for (int j = 0; j < gridWidth; ++j) {
+            // Position
+            float x = (float)(j * widthMeters / (gridWidth - 1));
+            float z = (float)(i * heightMeters / (gridHeight - 1));
+            float y = terrainData.elevationGrid[i][j] * m_elevationScale;
+            *p++ = x;
+            *p++ = y;
+            *p++ = z;
+
+            // Normals (temporary, will be properly calculated later)
+            *p++ = 0.0f;
+            *p++ = 1.0f;
+            *p++ = 0.0f;
+
+            // Texture coordinates
+            *p++ = (float)j / (gridWidth - 1);
+            *p++ = (float)i / (gridHeight - 1);
         }
-        
-        // Set dimensions
-        float width = TERRAIN_WIDTH;
-        float depth = TERRAIN_WIDTH * (maxLon - minLon) / (maxLat - minLat);
-        float height = 5.0f; // Base height
-        
-        qDebug() << "ElevationView3D::createTerrainMesh - Setting terrain dimensions:" 
-                 << "width =" << width << "depth =" << depth << "height =" << height;
-        
-        terrainMesh->setXExtent(width);
-        terrainMesh->setYExtent(height);
-        terrainMesh->setZExtent(depth);
-        
-        // Create material - use PhongAlpha material for better performance
-        Qt3DExtras::QPhongAlphaMaterial* terrainMaterial = new Qt3DExtras::QPhongAlphaMaterial();
-        terrainMaterial->setAmbient(QColor(100, 150, 100));
-        terrainMaterial->setDiffuse(QColor(120, 180, 120));
-        terrainMaterial->setSpecular(QColor(50, 50, 50));
-        terrainMaterial->setShininess(10.0f);
-        terrainMaterial->setAlpha(1.0f);
-        
-        // Create transform
-        Qt3DCore::QTransform* terrainTransform = new Qt3DCore::QTransform();
-        terrainTransform->setTranslation(QVector3D(0, -height / 2.0f, 0));
-        
-        // Add components to entity
-        terrainEntity->addComponent(terrainMesh);
-        terrainEntity->addComponent(terrainMaterial);
-        terrainEntity->addComponent(terrainTransform);
-        
-        // Only add a few elevation markers, not for every interval
-        int markerCount = 5; // Limit the number of elevation markers
-        float elevRange = maxEle - minEle;
-        float elevStep = elevRange / (markerCount - 1);
-        
-        for (int i = 0; i < markerCount; i++) {
-            float elev = minEle + i * elevStep;
-            
-            Qt3DCore::QEntity* markerEntity = new Qt3DCore::QEntity(terrainEntity);
-            
-            // Create text mesh for elevation label
-            Qt3DExtras::QExtrudedTextMesh* textMesh = new Qt3DExtras::QExtrudedTextMesh();
-            textMesh->setText(QString("%1m").arg(qRound(elev)));
-            textMesh->setDepth(0.2f);
-            textMesh->setFont(QFont("Arial", 5));
-            
-            // Create transform - position at the far edge of the terrain
-            Qt3DCore::QTransform* textTransform = new Qt3DCore::QTransform();
-            textTransform->setTranslation(QVector3D(-TERRAIN_WIDTH/2, elev * m_elevationScale, -TERRAIN_WIDTH/2));
-            textTransform->setScale(5.0f);
-            
-            // Create material - use a simpler material for text
-            Qt3DExtras::QPhongAlphaMaterial* textMaterial = new Qt3DExtras::QPhongAlphaMaterial();
-            textMaterial->setDiffuse(QColor(40, 40, 40));
-            textMaterial->setAmbient(QColor(40, 40, 40));
-            textMaterial->setSpecular(QColor(40, 40, 40, 128));
-            textMaterial->setShininess(5.0f);
-            
-            // Add components
-            markerEntity->addComponent(textMesh);
-            markerEntity->addComponent(textMaterial);
-            markerEntity->addComponent(textTransform);
-        }
-        
-        qDebug() << "ElevationView3D::createTerrainMesh - Completed successfully";
-        return terrainEntity;
-    } catch (const std::exception& e) {
-        qCritical() << "ElevationView3D::createTerrainMesh - Exception:" << e.what();
-        return nullptr;
-    } catch (...) {
-        qCritical() << "ElevationView3D::createTerrainMesh - Unknown exception occurred";
-        return nullptr;
     }
+
+    QByteArray indexBufferData;
+    indexBufferData.resize((gridWidth - 1) * (gridHeight - 1) * 6 * sizeof(unsigned int));
+    unsigned int* indices = reinterpret_cast<unsigned int*>(indexBufferData.data());
+    for (int i = 0; i < gridHeight - 1; ++i) {
+        for (int j = 0; j < gridWidth - 1; ++j) {
+            unsigned int i0 = i * gridWidth + j;
+            unsigned int i1 = i0 + 1;
+            unsigned int i2 = (i + 1) * gridWidth + j;
+            unsigned int i3 = i2 + 1;
+            *indices++ = i0; *indices++ = i2; *indices++ = i1;
+            *indices++ = i1; *indices++ = i2; *indices++ = i3;
+        }
+    }
+
+    Qt3DRender::QBuffer* vertexBuffer = new Qt3DRender::QBuffer(geometry);
+    vertexBuffer->setData(vertexBufferData);
+
+    Qt3DRender::QBuffer* indexBuffer = new Qt3DRender::QBuffer(geometry);
+    indexBuffer->setData(indexBufferData);
+
+    // Attributes
+    int stride = (3 + 3 + 2) * sizeof(float);
+    Qt3DRender::QAttribute* posAttr = new Qt3DRender::QAttribute();
+    posAttr->setName(Qt3DRender::QAttribute::defaultPositionAttributeName());
+    posAttr->setAttributeType(Qt3DRender::QAttribute::VertexAttribute);
+    posAttr->setBuffer(vertexBuffer);
+    posAttr->setVertexBaseType(Qt3DRender::QAttribute::Float);
+    posAttr->setVertexSize(3);
+    posAttr->setByteOffset(0);
+    posAttr->setByteStride(stride);
+    posAttr->setCount(gridWidth * gridHeight);
+
+    Qt3DRender::QAttribute* normAttr = new Qt3DRender::QAttribute();
+    normAttr->setName(Qt3DRender::QAttribute::defaultNormalAttributeName());
+    normAttr->setAttributeType(Qt3DRender::QAttribute::VertexAttribute);
+    normAttr->setBuffer(vertexBuffer);
+    normAttr->setVertexBaseType(Qt3DRender::QAttribute::Float);
+    normAttr->setVertexSize(3);
+    normAttr->setByteOffset(3 * sizeof(float));
+    normAttr->setByteStride(stride);
+    normAttr->setCount(gridWidth * gridHeight);
+
+    Qt3DRender::QAttribute* texAttr = new Qt3DRender::QAttribute();
+    texAttr->setName(Qt3DRender::QAttribute::defaultTextureCoordinateAttributeName());
+    texAttr->setAttributeType(Qt3DRender::QAttribute::VertexAttribute);
+    texAttr->setBuffer(vertexBuffer);
+    texAttr->setVertexBaseType(Qt3DRender::QAttribute::Float);
+    texAttr->setVertexSize(2);
+    texAttr->setByteOffset((3 + 3) * sizeof(float));
+    texAttr->setByteStride(stride);
+    texAttr->setCount(gridWidth * gridHeight);
+
+    Qt3DRender::QAttribute* indexAttr = new Qt3DRender::QAttribute();
+    indexAttr->setAttributeType(Qt3DRender::QAttribute::IndexAttribute);
+    indexAttr->setBuffer(indexBuffer);
+    indexAttr->setVertexBaseType(Qt3DRender::QAttribute::UnsignedInt);
+    indexAttr->setCount((gridWidth - 1) * (gridHeight - 1) * 6);
+
+    geometry->addAttribute(posAttr);
+    geometry->addAttribute(normAttr);
+    geometry->addAttribute(texAttr);
+    geometry->addAttribute(indexAttr);
+
+    meshRenderer->setGeometry(geometry);
+    meshRenderer->setPrimitiveType(Qt3DRender::QGeometryRenderer::Triangles);
+
+    // Material
+    Qt3DExtras::QDiffuseSpecularMaterial* material = new Qt3DExtras::QDiffuseSpecularMaterial();
+    if (!terrainData.satelliteImagePath.isEmpty()) {
+        Qt3DRender::QTexture2D* texture = new Qt3DRender::QTexture2D();
+        Qt3DRender::QTextureImage* textureImage = new Qt3DRender::QTextureImage();
+        textureImage->setSource(QUrl::fromLocalFile(terrainData.satelliteImagePath));
+        texture->addTextureImage(textureImage);
+        material->setDiffuse(QVariant::fromValue(texture));
+        material->setShininess(10.0f);
+    } else {
+        material->setDiffuse(QColor(Qt::darkGray));
+    }
+
+    terrainEntity->addComponent(meshRenderer);
+    terrainEntity->addComponent(material);
+    terrainEntity->addComponent(new Qt3DCore::QTransform());
+
+    return terrainEntity;
 }
 
 Qt3DCore::QEntity* ElevationView3D::createOptimizedRoutePath(const std::vector<TrackPoint>& points)
@@ -1425,4 +1457,21 @@ bool ElevationView3D::event(QEvent* event)
     }
     
     return QWidget::event(event);
+}
+
+void ElevationView3D::onTerrainDataReady(const TerrainData& data)
+{
+    logInfo("ElevationView3D", "Terrain data ready. Regenerating terrain mesh.");
+
+    // Safely clean up the old terrain entity
+    if (m_terrainEntity) {
+        m_terrainEntity->deleteLater();
+        m_terrainEntity = nullptr;
+    }
+
+    // Create the new terrain entity with the new data
+    m_terrainEntity = createTerrainMesh(data);
+    if (m_terrainEntity && m_rootEntity) {
+        m_terrainEntity->setParent(m_rootEntity);
+    }
 }

@@ -63,6 +63,8 @@ set(LIB_SOURCES
     src/MapWidget.cpp
     src/GpxParser.cpp
     src/TrackStatsWidget.cpp
+    src/WeatherService.cpp
+    src/TerrainService.cpp
     src/ElevationView3D.cpp
     src/LandingPage.cpp
     third_party/qcustomplot.cpp
@@ -74,6 +76,8 @@ set(HEADERS
     include/MapWidget.h
     include/GpxParser.h
     include/TrackStatsWidget.h
+    include/WeatherService.h
+    include/TerrainService.h
     include/ElevationView3D.h
     include/LandingPage.h
     include/debug_helper.h
@@ -159,6 +163,18 @@ set_target_properties(gpx_viewer PROPERTIES
     PDB_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     COMPILE_PDB_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
+
+# Testing setup
+enable_testing()
+
+# Add unit tests
+add_executable(gpxparser_test tests/gpxparser_test.cpp src/GpxParser.cpp)
+target_link_libraries(gpxparser_test PRIVATE Qt5::Test Qt5::Core Qt5::Positioning)
+add_test(NAME GpxParserTest COMMAND gpxparser_test)
+
+add_executable(trackstats_test tests/trackstats_test.cpp src/TrackStatsWidget.cpp src/GpxParser.cpp)
+target_link_libraries(trackstats_test PRIVATE Qt5::Test Qt5::Core Qt5::Widgets Qt5::Positioning)
+add_test(NAME TrackStatsTest COMMAND trackstats_test)
 
 # Message about build directory structure
 message(STATUS "Build files will be generated in: ${PROJECT_BINARY_DIR_ABSOLUTE}")
