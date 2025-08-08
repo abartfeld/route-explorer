@@ -1,5 +1,4 @@
 #include "RouteRenderer.h"
-#include "logging.h"
 #include <cmath>
 
 #include <Qt3DRender/QGeometry>
@@ -43,7 +42,16 @@ void RouteRenderer::generateMesh()
     const int numPoints = positions.size();
     const int numVertices = numPoints * ROUTE_SEGMENT_SIDES;
     const int numIndices = (numPoints - 1) * ROUTE_SEGMENT_SIDES * 2 * 3; // (num segments) * (sides) * (2 triangles per side) * (3 vertices per triangle)
+    const size_t numPoints = positions.size();
+    const size_t numVertices = numPoints * ROUTE_SEGMENT_SIDES;
+    const size_t numIndices = (numPoints > 1) ? (numPoints - 1) * ROUTE_SEGMENT_SIDES * 2 * 3 : 0; // (num segments) * (sides) * (2 triangles per side) * (3 vertices per triangle)
 
+    // Bounds checking to prevent overflow
+    if (numVertices > (std::numeric_limits<size_t>::max() / ((3 + 3) * sizeof(float))) ||
+        numIndices > (std::numeric_limits<size_t>::max() / sizeof(unsigned int))) {
+        logWarning("RouteRenderer", "Route too large to render safely (would overflow buffer sizes).");
+        return;
+    }
     vertexBufferData.resize(numVertices * (3 + 3) * sizeof(float)); // 3 for pos, 3 for normal
     float* p = reinterpret_cast<float*>(vertexBufferData.data());
 

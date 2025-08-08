@@ -79,7 +79,7 @@ void FlythroughController::updateAnimation()
     }
 
     m_progress += m_speed;
-    if (m_progress >= 1.0f) {
+    if (m_progress >= 1.0f - EPSILON) {
         stop();
         return;
     }

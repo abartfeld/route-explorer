@@ -10,7 +10,12 @@ namespace {
     // Function to convert latitude/longitude to local X/Z coordinates using Mercator projection
     QVector2D lonLatToMercator(double lon, double lat, double originLon, double originLat) {
         double x = EARTH_RADIUS_METERS * (lon - originLon) * (M_PI / 180.0) * std::cos(originLat * (M_PI / 180.0));
-        double z = EARTH_RADIUS_METERS * (lat - originLat) * (M_PI / 180.0);
+    constexpr double DEG_TO_RAD = M_PI / 180.0;
+
+    // Function to convert latitude/longitude to local X/Z coordinates using Mercator projection
+    QVector2D lonLatToMercator(double lon, double lat, double originLon, double originLat) {
+        double x = EARTH_RADIUS_METERS * (lon - originLon) * DEG_TO_RAD * std::cos(originLat * DEG_TO_RAD);
+        double z = EARTH_RADIUS_METERS * (lat - originLat) * DEG_TO_RAD;
         return QVector2D(static_cast<float>(x), static_cast<float>(z));
     }
 }
