@@ -66,6 +66,10 @@ set(LIB_SOURCES
     src/WeatherService.cpp
     src/TerrainService.cpp
     src/ElevationView3D.cpp
+    src/RouteData.cpp
+    src/RouteRenderer.cpp
+    src/FlythroughController.cpp
+    src/build_info.cpp
     src/LandingPage.cpp
     third_party/qcustomplot.cpp
 )
@@ -79,6 +83,9 @@ set(HEADERS
     include/WeatherService.h
     include/TerrainService.h
     include/ElevationView3D.h
+    include/RouteData.h
+    include/RouteRenderer.h
+    include/FlythroughController.h
     include/LandingPage.h
     include/debug_helper.h
     include/build_info.h
@@ -169,12 +176,16 @@ enable_testing()
 
 # Add unit tests
 add_executable(gpxparser_test tests/gpxparser_test.cpp src/GpxParser.cpp)
-target_link_libraries(gpxparser_test PRIVATE Qt5::Test Qt5::Core Qt5::Positioning)
+target_link_libraries(gpxparser_test PRIVATE Qt5::Test Qt5::Core Qt5::Positioning GTest::gtest GTest::gtest_main)
 add_test(NAME GpxParserTest COMMAND gpxparser_test)
 
-add_executable(trackstats_test tests/trackstats_test.cpp src/TrackStatsWidget.cpp src/GpxParser.cpp)
-target_link_libraries(trackstats_test PRIVATE Qt5::Test Qt5::Core Qt5::Widgets Qt5::Positioning)
-add_test(NAME TrackStatsTest COMMAND trackstats_test)
+add_executable(routedata_test tests/routedata_test.cpp src/RouteData.cpp)
+target_link_libraries(routedata_test PRIVATE Qt5::Test Qt5::Core Qt5::Positioning Qt5::Gui)
+add_test(NAME RouteDataTest COMMAND routedata_test -platform offscreen)
+
+add_executable(flythroughcontroller_test tests/flythroughcontroller_test.cpp)
+target_link_libraries(flythroughcontroller_test PRIVATE gpx_viewer_lib Qt5::Test Qt5::Core Qt5::Gui Qt5::Positioning Qt5::3DRender)
+add_test(NAME FlythroughControllerTest COMMAND flythroughcontroller_test -platform offscreen)
 
 # Message about build directory structure
 message(STATUS "Build files will be generated in: ${PROJECT_BINARY_DIR_ABSOLUTE}")
